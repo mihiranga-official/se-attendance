@@ -35,24 +35,35 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<void> {
-    // Hardcoded Admin Login
-    if (email === 'admin' && password === 'admin') {
-      const mockProfile: UserProfile = {
-        uid: 'admin_fixed',
-        name: 'Damro Admin',
-        email: 'admin@damro.com',
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
+    console.log('Login attempt:', { cleanEmail, cleanPassword });
+
+    // Hardcoded Master Logins (DA/DA or admin/admin)
+    if ((cleanEmail === 'DA' && cleanPassword === 'DA') || (cleanEmail === 'admin' && cleanPassword === 'admin')) {
+      console.log('Hardcoded master login detected!');
+      const { signInAnonymously } = await import('firebase/auth');
+      const cred = await signInAnonymously(auth);
+      
+      const adminProfile: UserProfile = {
+        uid: cred.user.uid,
+        name: 'System Administrator',
+        email: cleanEmail === 'admin' ? 'admin@damro.local' : 'da@damro.local',
         role: 'admin',
         createdAt: new Date().toISOString()
       };
-      this.userProfile.set(mockProfile);
-      this.currentUser.set({ uid: 'admin_fixed', email: 'admin@damro.com' } as any);
+
+      await set(ref(database, `users/${cred.user.uid}`), adminProfile);
+      this.userProfile.set(adminProfile);
       this.router.navigate(['/admin']);
       return;
     }
 
-    const cred = await signInWithEmailAndPassword(auth, email, password);
+    const cred = await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
     await this.loadUserProfile(cred.user.uid);
     const profile = this.userProfile();
+    
+    // Check role and redirect accordingly
     if (profile?.role === 'admin') {
       this.router.navigate(['/admin']);
     } else {
@@ -71,7 +82,12 @@ export class AuthService {
     };
     await set(ref(database, `users/${cred.user.uid}`), profile);
     this.userProfile.set(profile);
-    this.router.navigate(['/dashboard']);
+    
+    if (role === 'admin') {
+      this.router.navigate(['/admin']);
+    } else {
+      this.router.navigate(['/dashboard']);
+    }
   }
 
   async logout(): Promise<void> {

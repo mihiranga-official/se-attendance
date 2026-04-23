@@ -2,6 +2,8 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as XLSX from 'xlsx';
+import { ref, get, onValue } from 'firebase/database';
+import { database } from '../../core/firebase.config';
 import { UserService } from '../../core/services/user.service';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { LeaveService } from '../../core/services/leave.service';
@@ -22,6 +24,7 @@ export class AdminComponent implements OnInit {
   private auth = inject(AuthService);
 
   activeTab: 'users' | 'attendance' | 'leaves' = 'users';
+  showPermissionHelp = signal(false);
   users = signal<UserProfile[]>([]);
   allLeaves = signal<{ uid: string; leaves: LeaveRecord[]; userName: string }[]>([]);
   allAttendance = signal<{ uid: string; records: AttendanceRecord[]; userName: string }[]>([]);
@@ -38,6 +41,16 @@ export class AdminComponent implements OnInit {
   showManualModal = signal(false);
   manualData = signal({ uid: '', date: '', status: 'present', checkIn: '08:00', checkOut: '17:00', notes: '' });
   isSavingManual = signal(false);
+
+  // Add User states
+  showAddUserModal = signal(false);
+  isSavingUser = signal(false);
+  newUserData = { name: '', email: '', role: 'employee' as 'admin' | 'employee', uid: '' };
+
+  // User Import states
+  showUserImportModal = signal(false);
+  isImportingUsers = signal(false);
+  userImportLog = signal<string[]>([]);
   
   async ngOnInit() {
     await this.loadData();
@@ -46,51 +59,98 @@ export class AdminComponent implements OnInit {
   async loadData() {
     this.isLoading.set(true);
     try {
-      const users = await this.userSvc.getAllUsers();
-      this.users.set(users);
+      // Real-time listener for users
+      const usersRef = ref(database, 'users');
+      onValue(usersRef, (snap) => {
+        const data = snap.exists() ? snap.val() : {};
+        // Safety check: handle both Object and Array formats from Firebase
+        const usersList = (Array.isArray(data) ? data : Object.values(data))
+          .filter(u => u && typeof u === 'object') as UserProfile[];
+          
+        console.log('Admin: Users list updated:', usersList.length);
+        this.processUsers(usersList);
+      }, (err) => {
+        console.error('Admin: Database error:', err);
+        if (err.message.includes('permission_denied')) {
+          this.showPermissionHelp.set(true);
+        }
+        alert('Database connection error: ' + err.message);
+      });
 
-      const [leavesData, attendanceData] = await Promise.all([
+      // One-time fetch for records
+      const [leavesData, attendanceSnap] = await Promise.all([
         this.leaveSvc.getAllLeaves(),
-        this.attendSvc.getAllAttendanceForMonth(new Date().getFullYear(), new Date().getMonth() + 1)
+        get(ref(database, 'attendance'))
       ]);
 
-      const leavesList = [];
-      for (const uid in leavesData) {
-        const user = users.find(u => u.uid === uid);
-        leavesList.push({
-          uid,
-          userName: user?.name ?? 'Unknown',
-          leaves: leavesData[uid]
-        });
-      }
-      this.allLeaves.set(leavesList);
-
-      const attendList = [];
-      for (const uid in attendanceData) {
-        const user = users.find(u => u.uid === uid);
-        attendList.push({
-          uid,
-          userName: user?.name ?? 'Unknown',
-          records: attendanceData[uid]
-        });
-      }
-      this.allAttendance.set(attendList);
-
-    } catch (e) {
+      this.processRecords(leavesData, attendanceSnap);
+    } catch (e: any) {
       console.error(e);
+      alert('Error loading data: ' + e.message);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  private processUsers(users: UserProfile[]) {
+    this.users.set(users);
+  }
+
+  private processRecords(leavesData: any, attendanceSnap: any) {
+    const attendanceDataRaw = attendanceSnap.exists() ? attendanceSnap.val() : {};
+    const prefix = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const users = this.users();
+
+    const attendanceData: Record<string, AttendanceRecord[]> = {};
+    const discoveredUids = new Set<string>();
+
+    for (const uid in attendanceDataRaw) {
+      discoveredUids.add(uid);
+      attendanceData[uid] = Object.values(attendanceDataRaw[uid] as Record<string, AttendanceRecord>)
+        .filter(r => r.date.startsWith(prefix));
+    }
+
+    for (const uid in leavesData) discoveredUids.add(uid);
+
+    const attendList = [];
+    for (const uid in attendanceData) {
+      const user = users.find(u => u.uid === uid);
+      attendList.push({
+        uid,
+        userName: user?.name ?? `User (${uid.slice(-4)})`,
+        records: attendanceData[uid]
+      });
+    }
+    this.allAttendance.set(attendList);
+
+    const leavesList = [];
+    for (const uid in leavesData) {
+      const user = users.find(u => u.uid === uid);
+      leavesList.push({
+        uid,
+        userName: user?.name ?? `User (${uid.slice(-4)})`,
+        leaves: leavesData[uid]
+      });
+    }
+    this.allLeaves.set(leavesList);
+
+    // Discover missing users
+    const missingUids = Array.from(discoveredUids).filter(uid => !users.find(u => u.uid === uid));
+    if (missingUids.length > 0) {
+      const placeholders = missingUids.map(uid => ({
+        uid,
+        name: `Discovered User (${uid.slice(-4)})`,
+        email: 'placeholder@system.local',
+        role: 'employee' as const,
+        createdAt: new Date().toISOString()
+      }));
+      this.users.set([...users, ...placeholders]);
     }
   }
 
 
 
   async onFileChange(event: any) {
-    if (!this.selectedImportUid()) {
-      alert('Please select a user first.');
-      return;
-    }
-
     const file = event.target.files[0];
     if (!file) return;
 
@@ -104,14 +164,12 @@ export class AdminComponent implements OnInit {
         const wb: XLSX.WorkBook = XLSX.read(bstr, { type: 'binary' });
         const wsname: string = wb.SheetNames[0];
         const ws: XLSX.WorkSheet = wb.Sheets[wsname];
-        // Read only the necessary range (A1:E36 covers row 0 to 35 and columns A to E)
-        const data: any[] = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, blankrows: false });
-
-        // Limit data to the first 36 rows regardless of what's in the file
-        const filteredData = data.slice(0, 36);
         
-        this.importLog.update(log => [...log, `Found ${filteredData.length} active rows. Processing...`]);
-        await this.processImportData(filteredData);
+        // Use sheet_to_json to handle all columns automatically
+        const data: any[] = XLSX.utils.sheet_to_json(ws);
+        
+        this.importLog.update(log => [...log, `Found ${data.length} rows. Processing...`]);
+        await this.processImportData(data);
       } catch (err) {
         console.error(err);
         this.importLog.update(log => [...log, 'Error reading file.']);
@@ -123,22 +181,51 @@ export class AdminComponent implements OnInit {
   }
 
   async processImportData(rows: any[]) {
-    const uid = this.selectedImportUid();
+    let targetUid = this.selectedImportUid();
     let successCount = 0;
+    let newUsersCount = 0;
 
-    // Limit to rows 2 to 35 (first 35 rows) as requested
-    const limit = Math.min(rows.length, 36); // 36 because i starts at 2 and we want up to row 35
-    for (let i = 2; i < limit; i++) {
-      const row = rows[i];
-      if (!row[0]) continue; // Empty date
+    for (const row of rows) {
+      const dateVal = row['Date'] || row['date'];
+      const nameVal = row['Name'] || row['name'];
+      const inVal = row['In Time'] || row['in'] || row['Check In'];
+      const outVal = row['Out Time'] || row['out'] || row['Check Out'];
+      const remarkVal = row['Remark'] || row['notes'] || row['remark'];
+
+      if (!dateVal) continue;
+
+      let uid = targetUid;
+
+      // Auto-match user by name if no specific user selected
+      if (!uid && nameVal) {
+        const existingUser = this.users().find(u => u.name.toLowerCase() === nameVal.toLowerCase());
+        if (existingUser) {
+          uid = existingUser.uid;
+        } else {
+          // AUTO-CREATE PROFILE
+          const newUserUid = `user_auto_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+          const email = `${nameVal.toLowerCase().replace(/\s+/g, '.')}@company.com`;
+          const profile: UserProfile = {
+            uid: newUserUid,
+            name: nameVal,
+            email: email,
+            role: 'employee',
+            createdAt: new Date().toISOString()
+          };
+          await this.userSvc.createUserProfile(profile);
+          uid = newUserUid;
+          newUsersCount++;
+          this.users.update(list => [...list, profile]);
+        }
+      }
+
+      if (!uid) continue;
 
       try {
-        const dateStr = this.parseExcelDate(row[0]);
+        const dateStr = this.parseExcelDate(dateVal);
         if (!dateStr) continue;
 
-        const remark = row[3] || '';
-        const inTimeRaw = String(row[1] || '').trim();
-        
+        const inTimeRaw = String(inVal || '').trim();
         let status: any = 'absent';
         let inTime: string | null = null;
         let outTime: string | null = null;
@@ -147,27 +234,19 @@ export class AdminComponent implements OnInit {
           status = 'holiday';
         } else if (inTimeRaw.toLowerCase().includes('leave')) {
           status = 'leave';
-          // Create a leave record automatically
-          await this.leaveSvc.applyLeave(uid, {
-            date: dateStr,
-            type: 'full',
-            reason: 'Imported from Excel'
-          });
         } else if (inTimeRaw.toLowerCase().includes('sunday')) {
           status = 'weekend';
         } else {
-          inTime = this.parseExcelTime(row[1]);
-          outTime = this.parseExcelTime(row[2]);
-          if (inTime) {
-            status = 'present';
-          }
+          inTime = this.parseExcelTime(inVal);
+          outTime = this.parseExcelTime(outVal);
+          if (inTime) status = 'present';
         }
 
-        const record: any = {
+        const record: AttendanceRecord = {
           date: dateStr,
-          checkIn: inTime || null,
-          checkOut: outTime || null,
-          notes: remark || null,
+          checkIn: inTime || undefined,
+          checkOut: outTime || undefined,
+          notes: remarkVal || undefined,
           status: status,
           workedHours: 0,
           otHours: 0
@@ -176,11 +255,101 @@ export class AdminComponent implements OnInit {
         await this.attendSvc.saveAttendance(uid, record);
         successCount++;
       } catch (e: any) {
-        this.importLog.update(log => [...log, `Row ${i+1} failed: ${e.message || 'Invalid data'}`]);
+        console.error(e);
       }
     }
 
-    this.importLog.update(log => [...log, `Successfully imported ${successCount} records.`]);
+    this.importLog.update(log => [
+      ...log, 
+      `Import complete: ${successCount} records saved.`,
+      newUsersCount > 0 ? `${newUsersCount} new users auto-created.` : ''
+    ].filter(Boolean));
+    await this.loadData();
+  }
+
+  async addNewUser() {
+    const { name, email, role, uid } = this.newUserData;
+    if (!name || !email) {
+      alert('Name and Email are required.');
+      return;
+    }
+
+    this.isSavingUser.set(true);
+    try {
+      const newUserUid = uid || `user_${Date.now()}`;
+      const profile: UserProfile = {
+        uid: newUserUid,
+        name,
+        email,
+        role,
+        createdAt: new Date().toISOString()
+      };
+
+      await this.userSvc.createUserProfile(profile);
+      alert('User profile created successfully.');
+      this.showAddUserModal.set(false);
+      this.newUserData = { name: '', email: '', role: 'employee', uid: '' };
+      await this.loadData();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to create user profile.');
+    } finally {
+      this.isSavingUser.set(false);
+    }
+  }
+
+  async onUserFileChange(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    this.isImportingUsers.set(true);
+    this.userImportLog.set(['Reading user list...']);
+
+    const reader = new FileReader();
+    reader.onload = async (e: any) => {
+      try {
+        const bstr: string = e.target.result;
+        const wb: XLSX.WorkBook = XLSX.read(bstr, { type: 'binary' });
+        const ws: XLSX.WorkSheet = wb.Sheets[wb.SheetNames[0]];
+        const data: any[] = XLSX.utils.sheet_to_json(ws);
+        
+        this.userImportLog.update(log => [...log, `Found ${data.length} rows. Processing...`]);
+        await this.processUserImport(data);
+      } catch (err) {
+        console.error(err);
+        this.userImportLog.update(log => [...log, 'Error reading file.']);
+      } finally {
+        this.isImportingUsers.set(false);
+      }
+    };
+    reader.readAsBinaryString(file);
+  }
+
+  async processUserImport(rows: any[]) {
+    let successCount = 0;
+    for (const row of rows) {
+      const name = row['Name'] || row['name'];
+      const email = row['Email'] || row['email'];
+      const role = (row['Role'] || row['role'] || 'employee').toLowerCase() as 'admin' | 'employee';
+      const uid = row['UID'] || row['uid'] || `user_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+
+      if (!name || !email) continue;
+
+      try {
+        const profile: UserProfile = {
+          uid,
+          name,
+          email,
+          role: role === 'admin' ? 'admin' : 'employee',
+          createdAt: new Date().toISOString()
+        };
+        await this.userSvc.createUserProfile(profile);
+        successCount++;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    this.userImportLog.update(log => [...log, `Successfully imported ${successCount} users.`]);
     await this.loadData();
   }
 
@@ -196,9 +365,9 @@ export class AdminComponent implements OnInit {
       const record: any = {
         date,
         status,
-        checkIn: checkIn || null,
-        checkOut: checkOut || null,
-        notes: notes || null,
+        checkIn: checkIn || undefined,
+        checkOut: checkOut || undefined,
+        notes: notes || undefined,
         workedHours: 0,
         otHours: 0
       };

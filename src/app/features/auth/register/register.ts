@@ -22,6 +22,7 @@ export class RegisterComponent {
   isLoading = signal(false);
   errorMsg = signal('');
   successMsg = signal('');
+  role: 'admin' | 'employee' = 'employee';
 
   async onSubmit() {
     if (!this.name || !this.email || !this.password) {
@@ -39,7 +40,7 @@ export class RegisterComponent {
     this.isLoading.set(true);
     this.errorMsg.set('');
     try {
-      await this.auth.register(this.email, this.password, this.name);
+      await this.auth.register(this.email, this.password, this.name, this.role);
     } catch (e: any) {
       const msg = e?.code === 'auth/email-already-in-use'
         ? 'This email is already registered.'

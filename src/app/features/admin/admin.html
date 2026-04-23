@@ -5,13 +5,25 @@
       <p class="page-subtitle">Manage company employees and attendance records</p>
     </div>
     <div class="header-actions">
-      <button class="btn-primary" (click)="showImportModal.set(true)">
+      <button class="btn-secondary" (click)="loadData()" [disabled]="isLoading()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        <span>Refresh</span>
+      </button>
+      <button class="btn-primary" (click)="showAddUserModal.set(true)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        <span>Add User</span>
+      </button>
+      <button class="btn-secondary" (click)="showUserImportModal.set(true)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2m0 10c2.7 0 5.8 1.29 6 2H6c.23-.72 3.31-2 6-2m0-12C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4m0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        <span>Import Users</span>
+      </button>
+      <button class="btn-secondary" (click)="showImportModal.set(true)">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
-        <span>Import Excel</span>
+        <span>Import Attendance</span>
       </button>
       <button class="btn-secondary" (click)="showManualModal.set(true)">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-        <span>Manual Holiday/Entry</span>
+        <span>Manual Entry</span>
       </button>
     </div>
   </div>
@@ -128,8 +140,39 @@
           </table>
         </div>
       }
-
+    <!-- System Diagnostics -->
+  <!-- Permission Denied Help Modal -->
+  @if (showPermissionHelp()) {
+    <div class="modal-backdrop" (click)="showPermissionHelp.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()" style="max-width: 600px;">
+        <div class="modal-header">
+          <h3>Firebase Permission Issue</h3>
+          <button class="close-btn" (click)="showPermissionHelp.set(false)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p style="color: var(--danger); font-weight: 600; margin-bottom: 15px;">Your Firebase Database Rules are blocking access to the user list.</p>
+          <p>To fix this, go to your <strong>Firebase Console > Realtime Database > Rules</strong> and paste this configuration:</p>
+          
+          <pre style="background: #1e293b; color: #fff; padding: 15px; border-radius: 8px; font-size: 0.8rem; overflow-x: auto; margin: 15px 0;">
+{{ '{' }}
+  "rules": {{ '{' }}
+    ".read": "auth != null",
+    ".write": "auth != null"
+  {{ '}' }}
+{{ '}' }}
+          </pre>
+          
+          <p class="help-text">Note: These rules allow any logged-in user to read/write. For better security later, you can restrict it further.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" (click)="showPermissionHelp.set(false)">I'll update my rules</button>
+        </div>
+      </div>
     </div>
+  }
+</div>
   }
 
   <!-- Import Modal -->
@@ -147,18 +190,25 @@
           <p class="modal-desc">Upload an Excel file with columns: Date, In Time, Out Time, Remark.</p>
           
           <div class="form-group">
-            <label>Select User to Import For</label>
-            <select [(ngModel)]="selectedImportUid" class="input-field">
-              <option value="" disabled>Choose an employee...</option>
+            <label>Select User to Import For (Optional)</label>
+            <select [ngModel]="selectedImportUid()" (ngModelChange)="selectedImportUid.set($event)" class="input-field">
+              <option value="">General Attendance (Auto-match by Name)</option>
+              @if (isLoading()) {
+                <option disabled>Loading employees...</option>
+              }
               @for (user of users(); track user.uid) {
                 <option [value]="user.uid">{{ user.name }} ({{ user.email }})</option>
               }
+              @if (users().length === 0 && !isLoading()) {
+                <option disabled>No users found. Try Refresh or Add User.</option>
+              }
             </select>
+            <p class="help-text">If you select "General", the Excel must have a "Name" column.</p>
           </div>
 
           <div class="form-group">
             <label>Excel File</label>
-            <input type="file" (change)="onFileChange($event)" accept=".xlsx, .xls, .csv" class="input-file-control" [disabled]="!selectedImportUid() || isImporting()">
+            <input type="file" (change)="onFileChange($event)" accept=".xlsx, .xls, .csv" class="input-file-control" [disabled]="isImporting()">
           </div>
 
           @if (importLog().length > 0) {
@@ -172,6 +222,37 @@
 
         <div class="modal-footer">
           <button class="btn-secondary" (click)="showImportModal.set(false)">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- User Import Modal -->
+  @if (showUserImportModal()) {
+    <div class="modal-backdrop" (click)="showUserImportModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Bulk Import Users</h3>
+          <button class="close-btn" (click)="showUserImportModal.set(false)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">Upload Excel with columns: Name, Email, Role, [UID (optional)].</p>
+          <div class="form-group">
+            <label>User List Excel</label>
+            <input type="file" (change)="onUserFileChange($event)" accept=".xlsx, .xls" class="input-file-control" [disabled]="isImportingUsers()">
+          </div>
+          @if (userImportLog().length > 0) {
+            <div class="import-log">
+              @for (line of userImportLog(); track $index) {
+                <div class="log-line">{{ line }}</div>
+              }
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="showUserImportModal.set(false)">Close</button>
         </div>
       </div>
     </div>
@@ -237,6 +318,50 @@
           <button class="btn-primary" (click)="saveManualEntry()" [disabled]="isSavingManual()">
             @if (isSavingManual()) { <span class="spinner-sm"></span> }
             <span>Save Entry</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+  <!-- Add User Modal -->
+  @if (showAddUserModal()) {
+    <div class="modal-backdrop" (click)="showAddUserModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Register New Employee</h3>
+          <button class="close-btn" (click)="showAddUserModal.set(false)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">This will create a permanent profile in the database. Use the exact UID if the user already exists in Firebase Auth.</p>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" [(ngModel)]="newUserData.name" class="input-field" placeholder="John Doe">
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" [(ngModel)]="newUserData.email" class="input-field" placeholder="john@example.com">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Role</label>
+              <select [(ngModel)]="newUserData.role" class="input-field">
+                <option value="employee">Employee</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>User ID (Optional)</label>
+              <input type="text" [(ngModel)]="newUserData.uid" class="input-field" placeholder="Auth UID">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="showAddUserModal.set(false)">Cancel</button>
+          <button class="btn-primary" (click)="addNewUser()" [disabled]="isSavingUser()">
+            @if (isSavingUser()) { <span class="spinner-sm"></span> }
+            <span>Create Profile</span>
           </button>
         </div>
       </div>
