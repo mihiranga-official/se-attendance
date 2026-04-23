@@ -1,4 +1,4 @@
-# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# See http://help.github.com/ignore-files/ for more about ignoring files.
 
 # Compiled output
 /dist
@@ -12,32 +12,37 @@ npm-debug.log
 yarn-error.log
 
 # IDEs and editors
-.idea/
+/.idea
 .project
 .classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# Visual Studio Code
+.cproject
+/.vscode
+.settings
 .vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
 !.vscode/settings.json
 !.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-.history/*
 
-# Miscellaneous
-/.angular/cache
-.sass-cache/
-/connect.lock
-/coverage
-/libpeerconnection.log
-testem.log
-/typings
-__screenshots__/
+# Visual Studio Code
+.history/
 
-# System files
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+pubsub-debug.log
+ui-debug.log
+
+# System Files
 .DS_Store
 Thumbs.db
+
+# Angular
+/.angular
+/.cache
+/.next
+/coverage
+/.nyc_output
+
+# End of .gitignore

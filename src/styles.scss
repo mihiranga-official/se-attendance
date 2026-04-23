@@ -120,7 +120,41 @@ h1, h2, h3, h4 {
   
   &:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
   &:active { transform: translateY(0); }
-  &:disabled { opacity: 0.7; cursor: not-allowed; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+/* Global Modal Utilities */
+.z-max { z-index: 9999 !important; }
+.text-center { text-align: center; }
+.flex-center { justify-content: center !important; }
+
+.warning-icon {
+  color: #f59e0b;
+  margin-bottom: 1.5rem;
+  animation: pulse 2s infinite;
+}
+
+.timer-msg {
+  font-weight: 700;
+  color: #1e293b;
+  margin-top: 1rem;
+}
+
+.bounce-in {
+  animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); opacity: 1; }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
 }
 
 .btn-secondary {

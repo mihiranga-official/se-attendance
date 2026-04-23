@@ -148,6 +148,31 @@
   margin-top: 0.5rem;
 }
 
+.leave-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  
+  .badge {
+    font-size: 0.65rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+    background: #faf5ff;
+    color: #7c3aed;
+    border: 1px solid #e9d5ff;
+    text-align: center;
+    white-space: nowrap;
+  }
+  
+  .leave-type {
+    font-size: 0.6rem;
+    color: #9333ea;
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+  }
+}
+
 .attendance-info {
   display: flex;
   flex-direction: column;
@@ -192,6 +217,78 @@
   
   &.holiday { background: #fee2e2; color: #ef4444; }
   &.halfday { background: #e0e7ff; color: #6366f1; }
+}
+
+.modal-footer {
+  padding: 1.25rem 1.5rem;
+  background: #f8fafc;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.quick-status-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px dashed #e2e8f0;
+
+  label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+}
+
+.quick-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.btn-quick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.75rem 0.5rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: white;
+
+  span {
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  svg {
+    opacity: 0.9;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.btn-holiday { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2); }
+  &.btn-weekend { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.2); }
+  &.btn-leave   { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.2); }
 }
 
 .calendar-legend {
@@ -289,6 +386,13 @@
     font-weight: 500;
     color: #475569;
     margin-bottom: 0.5rem;
+
+    .optional-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-left: 4px;
+    }
   }
 }
 

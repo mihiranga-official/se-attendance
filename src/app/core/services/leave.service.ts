@@ -11,7 +11,7 @@ export class LeaveService {
     const record: LeaveRecord = {
       ...leave,
       leaveId,
-      status: 'pending',
+      status: 'approved',
       appliedAt: new Date().toISOString()
     };
     await set(ref(database, `leaves/${uid}/${leaveId}`), record);
@@ -41,9 +41,6 @@ export class LeaveService {
     return result;
   }
 
-  async updateLeaveStatus(uid: string, leaveId: string, status: 'approved' | 'rejected', approvedBy: string): Promise<void> {
-    await update(ref(database, `leaves/${uid}/${leaveId}`), { status, approvedBy });
-  }
 
   async deleteLeave(uid: string, leaveId: string): Promise<void> {
     await set(ref(database, `leaves/${uid}/${leaveId}`), null);

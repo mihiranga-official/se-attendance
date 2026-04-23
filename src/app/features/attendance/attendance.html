@@ -33,7 +33,12 @@
           
           @if (day.isCurrentMonth) {
             <div class="day-content">
-              @if (day.record) {
+              @if (day.leave) {
+                <div class="leave-badge">
+                  <span class="badge badge-warning">ON LEAVE</span>
+                  <span class="leave-type">{{ day.leave.type === 'full' ? 'Full' : 'Half' }}</span>
+                </div>
+              } @else if (day.record) {
                 <div class="attendance-info">
                   @if (day.record.checkIn) {
                     <div class="time-mark in">
@@ -101,16 +106,34 @@
           </div>
 
           <div class="form-group">
-            <label>Notes</label>
+            <label>Notes <span class="optional-label">(Optional)</span></label>
             <textarea [(ngModel)]="editNotes" placeholder="Any additional notes..." class="input-field textarea"></textarea>
+          </div>
+
+          <div class="quick-status-section">
+            <label>Quick Status Update</label>
+            <div class="quick-status-grid">
+              <button type="button" class="btn-quick btn-holiday" (click)="markAsHoliday()" [disabled]="isSaving()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+                <span>Holiday</span>
+              </button>
+              <button type="button" class="btn-quick btn-weekend" (click)="markAsSunday()" [disabled]="isSaving()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/></svg>
+                <span>Sunday</span>
+              </button>
+              <button type="button" class="btn-quick btn-leave" (click)="markAsLeave()" [disabled]="isSaving()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+                <span>Leave</span>
+              </button>
+            </div>
           </div>
         </div>
 
         <div class="modal-footer">
           <button class="btn-secondary" (click)="closeModal()">Cancel</button>
           <button class="btn-primary" (click)="saveEntry()" [disabled]="isSaving()">
-            @if (isSaving()) { <span class="spinner"></span> }
-            Save Changes
+            @if (isSaving()) { <span class="spinner-sm"></span> }
+            <span>Save Entry</span>
           </button>
         </div>
       </div>

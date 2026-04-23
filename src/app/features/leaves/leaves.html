@@ -1,12 +1,12 @@
 <div class="leaves-page">
   <div class="page-header">
     <div class="header-content">
-      <h1 class="page-title">Leave Management</h1>
-      <p class="page-subtitle">Submit and track your leave applications</p>
+      <h1 class="page-title">Leave Tracker</h1>
+      <p class="page-subtitle">Log and track your leave days for the team</p>
     </div>
     <button class="btn-primary" (click)="openModal()" id="btn-apply-leave">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-      <span>Apply for Leave</span>
+      <span>Log Leave</span>
     </button>
   </div>
 
@@ -48,14 +48,12 @@
                 <td class="reason-cell">{{ leave.reason }}</td>
                 <td class="applied-cell">{{ leave.appliedAt | date:'mediumDate' }}</td>
                 <td>
-                  <span class="badge {{ getStatusClass(leave.status) }}">{{ leave.status }}</span>
+                  <span class="badge badge-success">Recorded</span>
                 </td>
                 <td class="actions-col">
-                  @if (leave.status === 'pending') {
-                    <button class="btn-text-danger" (click)="cancelLeave(leave.leaveId)" title="Cancel Request">
-                      Cancel
-                    </button>
-                  }
+                  <button class="btn-text-danger" (click)="cancelLeave(leave.leaveId)" title="Remove Entry">
+                    Remove
+                  </button>
                 </td>
               </tr>
             }
@@ -70,7 +68,7 @@
     <div class="modal-backdrop" (click)="closeModal()">
       <div class="modal-card" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>Apply for Leave</h3>
+          <h3>Log Leave Date</h3>
           <button class="close-btn" (click)="closeModal()">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
@@ -105,7 +103,7 @@
           <button class="btn-secondary" (click)="closeModal()">Cancel</button>
           <button class="btn-primary" (click)="submitLeave()" [disabled]="isSaving()" id="btn-submit-leave">
             @if (isSaving()) { <span class="spinner"></span> }
-            Submit Application
+            Record Leave
           </button>
         </div>
       </div>

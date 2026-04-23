@@ -23,6 +23,7 @@ export class SummaryService {
     let leaveDays = 0;
     let halfDays = 0;
     let totalOTHours = 0;
+    let extraDays = 0;
 
     for (const day of workingDays) {
       const rec = recordMap.get(day);
@@ -42,6 +43,15 @@ export class SummaryService {
       }
     }
 
+    // Count extra days (worked Sundays)
+    const allRecords = records;
+    for (const rec of allRecords) {
+      const isSunday = new Date(rec.date).getDay() === 0;
+      if (isSunday && (rec.status === 'present' || rec.checkIn)) {
+        extraDays++;
+      }
+    }
+
     const totalWorkingDays = workingDays.length;
     const attendancePercentage = totalWorkingDays > 0
       ? parseFloat(((presentDays / totalWorkingDays) * 100).toFixed(1))
@@ -51,6 +61,7 @@ export class SummaryService {
       year, month, totalWorkingDays, presentDays,
       absentDays, leaveDays, halfDays,
       totalOTHours: parseFloat(totalOTHours.toFixed(2)),
+      extraDays,
       attendancePercentage
     };
   }

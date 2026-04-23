@@ -1,6 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { InactivityService } from '../../core/services/inactivity.service';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -10,9 +11,14 @@ import { CommonModule } from '@angular/common';
   templateUrl: './shell.html',
   styleUrl: './shell.scss'
 })
-export class ShellComponent {
+export class ShellComponent implements OnInit {
   auth = inject(AuthService);
+  inactivity = inject(InactivityService);
   sidebarOpen = signal(false);
+
+  ngOnInit() {
+    this.inactivity.startTracking();
+  }
 
   toggleSidebar() {
     this.sidebarOpen.update(v => !v);

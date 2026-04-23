@@ -38,5 +38,6 @@ export interface MonthlySummary {
   leaveDays: number;
   halfDays: number;
   totalOTHours: number;
+  extraDays: number;
   attendancePercentage: number;
 }

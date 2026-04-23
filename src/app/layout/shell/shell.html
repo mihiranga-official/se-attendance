@@ -77,4 +77,26 @@
       <router-outlet />
     </main>
   </div>
+
+  <!-- Inactivity Modal -->
+  @if (inactivity.showWarning()) {
+    <div class="modal-backdrop z-max">
+      <div class="modal-card bounce-in">
+        <div class="modal-header">
+          <h3>Are you still there?</h3>
+        </div>
+        <div class="modal-body text-center">
+          <div class="warning-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="64" height="64"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          </div>
+          <p>You have been inactive for 15 minutes. For your security, we are going to log you out shortly.</p>
+          <p class="timer-msg">Would you like to stay logged in?</p>
+        </div>
+        <div class="modal-footer flex-center">
+          <button class="btn-danger" (click)="logout()">No, Logout</button>
+          <button class="btn-primary" (click)="inactivity.stayLoggedIn()">Yes, Stay Logged In</button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

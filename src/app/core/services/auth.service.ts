@@ -35,6 +35,21 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<void> {
+    // Hardcoded Admin Login
+    if (email === 'admin' && password === 'admin') {
+      const mockProfile: UserProfile = {
+        uid: 'admin_fixed',
+        name: 'Damro Admin',
+        email: 'admin@damro.com',
+        role: 'admin',
+        createdAt: new Date().toISOString()
+      };
+      this.userProfile.set(mockProfile);
+      this.currentUser.set({ uid: 'admin_fixed', email: 'admin@damro.com' } as any);
+      this.router.navigate(['/admin']);
+      return;
+    }
+
     const cred = await signInWithEmailAndPassword(auth, email, password);
     await this.loadUserProfile(cred.user.uid);
     const profile = this.userProfile();
@@ -56,6 +71,7 @@ export class AuthService {
     };
     await set(ref(database, `users/${cred.user.uid}`), profile);
     this.userProfile.set(profile);
+    this.router.navigate(['/dashboard']);
   }
 
   async logout(): Promise<void> {

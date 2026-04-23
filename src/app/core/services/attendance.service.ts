@@ -115,8 +115,6 @@ export class AttendanceService {
     const today = this.getTodayStr();
     const existing = await this.getAttendanceForDate(uid, today);
     if (existing?.checkIn) throw new Error('Already checked in today');
-    const dayType = this.getDayType(today);
-    if (dayType === 'sunday') throw new Error('Today is a holiday (Sunday)');
     const now = this.getCurrentTimeStr();
     const record: AttendanceRecord = {
       date: today,

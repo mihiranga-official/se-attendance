@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { AttendanceService } from '../../core/services/attendance.service';
-import { AttendanceRecord } from '../../core/models/user.model';
+import { LeaveService } from '../../core/services/leave.service';
+import { AttendanceRecord, LeaveRecord } from '../../core/models/user.model';
 
 interface CalendarDay {
   date: string;
@@ -12,6 +13,7 @@ interface CalendarDay {
   isCurrentMonth: boolean;
   dayOfWeek: number;
   record?: AttendanceRecord;
+  leave?: LeaveRecord;
 }
 
 @Component({
@@ -24,12 +26,14 @@ interface CalendarDay {
 export class AttendanceComponent implements OnInit {
   private auth = inject(AuthService);
   private attendanceSvc = inject(AttendanceService);
+  private leaveSvc = inject(LeaveService);
 
   currentYear = signal(new Date().getFullYear());
   currentMonth = signal(new Date().getMonth() + 1);
   calendarDays = signal<CalendarDay[]>([]);
   selectedDay = signal<CalendarDay | null>(null);
   records = signal<AttendanceRecord[]>([]);
+  leaves = signal<LeaveRecord[]>([]);
 
   editCheckIn = '';
   editCheckOut = '';
@@ -52,12 +56,16 @@ export class AttendanceComponent implements OnInit {
   async loadMonth() {
     const uid = this.auth.currentUser()?.uid;
     if (!uid) return;
-    const recs = await this.attendanceSvc.getAttendanceForMonth(uid, this.currentYear(), this.currentMonth());
+    const [recs, leaves] = await Promise.all([
+      this.attendanceSvc.getAttendanceForMonth(uid, this.currentYear(), this.currentMonth()),
+      this.leaveSvc.getLeavesForMonth(uid, this.currentYear(), this.currentMonth())
+    ]);
     this.records.set(recs);
-    this.buildCalendar(recs);
+    this.leaves.set(leaves);
+    this.buildCalendar(recs, leaves);
   }
 
-  buildCalendar(recs: AttendanceRecord[]) {
+  buildCalendar(recs: AttendanceRecord[], leaves: LeaveRecord[]) {
     const y = this.currentYear();
     const m = this.currentMonth();
     const firstDay = new Date(y, m - 1, 1).getDay();
@@ -66,6 +74,7 @@ export class AttendanceComponent implements OnInit {
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
     const recMap = new Map(recs.map(r => [r.date, r]));
+    const leaveMap = new Map(leaves.map(l => [l.date, l]));
     const days: CalendarDay[] = [];
 
     // Padding for first week
@@ -89,7 +98,8 @@ export class AttendanceComponent implements OnInit {
         isToday: dateStr === todayStr,
         isCurrentMonth: true,
         dayOfWeek: new Date(y, m - 1, d).getDay(),
-        record: recMap.get(dateStr)
+        record: recMap.get(dateStr),
+        leave: leaveMap.get(dateStr)
       });
     }
 
@@ -131,8 +141,10 @@ export class AttendanceComponent implements OnInit {
   selectDay(day: CalendarDay) {
     if (!day.isCurrentMonth) return;
     this.selectedDay.set(day);
-    this.editCheckIn = day.record?.checkIn ?? '';
-    this.editCheckOut = day.record?.checkOut ?? '';
+    
+    // Set default times if no record exists, otherwise use existing record
+    this.editCheckIn = day.record?.checkIn ?? '08:00';
+    this.editCheckOut = day.record?.checkOut ?? '17:00';
     this.editNotes = day.record?.notes ?? '';
     this.saveMsg.set('');
     this.saveError.set('');
@@ -161,12 +173,12 @@ export class AttendanceComponent implements OnInit {
     this.isSaving.set(true);
     this.saveError.set('');
     try {
-      const record: AttendanceRecord = {
+      const record: any = {
         date: day.date,
-        checkIn: this.editCheckIn || undefined,
-        checkOut: this.editCheckOut || undefined,
+        checkIn: this.editCheckIn || null,
+        checkOut: this.editCheckOut || null,
         status: this.editCheckIn ? 'present' : 'absent',
-        notes: this.editNotes || undefined,
+        notes: this.editNotes || null,
         workedHours: 0,
         otHours: 0
       };
@@ -181,6 +193,80 @@ export class AttendanceComponent implements OnInit {
     }
   }
 
+  async markAsHoliday() {
+    const uid = this.auth.currentUser()?.uid;
+    const day = this.selectedDay();
+    if (!uid || !day) return;
+
+    this.isSaving.set(true);
+    try {
+      const record: any = {
+        date: day.date,
+        status: 'holiday',
+        notes: 'Public Holiday'
+      };
+      await this.attendanceSvc.saveAttendance(uid, record);
+      await this.loadMonth();
+      this.closeModal();
+    } catch (e: any) {
+      this.saveError.set(e.message);
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+
+  async markAsSunday() {
+    const uid = this.auth.currentUser()?.uid;
+    const day = this.selectedDay();
+    if (!uid || !day) return;
+
+    this.isSaving.set(true);
+    try {
+      const record: any = {
+        date: day.date,
+        status: 'weekend',
+        notes: 'Sunday'
+      };
+      await this.attendanceSvc.saveAttendance(uid, record);
+      await this.loadMonth();
+      this.closeModal();
+    } catch (e: any) {
+      this.saveError.set(e.message);
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+
+  async markAsLeave() {
+    const uid = this.auth.currentUser()?.uid;
+    const day = this.selectedDay();
+    if (!uid || !day) return;
+
+    this.isSaving.set(true);
+    try {
+      const record: any = {
+        date: day.date,
+        status: 'leave',
+        notes: 'Medical/Casual Leave'
+      };
+      // Save attendance record
+      await this.attendanceSvc.saveAttendance(uid, record);
+      // Also apply formal leave
+      await this.leaveSvc.applyLeave(uid, {
+        date: day.date,
+        type: 'full',
+        reason: 'Marked from Calendar'
+      });
+      
+      await this.loadMonth();
+      this.closeModal();
+    } catch (e: any) {
+      this.saveError.set(e.message);
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+
   getDayClass(day: CalendarDay): string {
     const classes: string[] = [];
     if (!day.isCurrentMonth) classes.push('outside');
@@ -189,7 +275,7 @@ export class AttendanceComponent implements OnInit {
     if (day.dayOfWeek === 6) classes.push('saturday');
     if (day.record?.checkIn && !day.record?.checkOut) classes.push('missing-checkout');
     if (day.record?.checkIn && day.record?.checkOut) classes.push('completed');
-    if (day.record?.status === 'leave') classes.push('on-leave');
+    if (day.record?.status === 'leave' || day.leave) classes.push('on-leave');
     return classes.join(' ');
   }
 
