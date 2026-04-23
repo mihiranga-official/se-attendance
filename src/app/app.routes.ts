@@ -1,3 +1,52 @@
 import { Routes } from '@angular/router';
+import { authGuard, guestGuard, adminGuard } from './core/guards/auth.guard';
 
-export const routes: Routes = [];
+export const routes: Routes = [
+  {
+    path: '',
+    redirectTo: 'dashboard',
+    pathMatch: 'full'
+  },
+  {
+    path: 'login',
+    loadComponent: () => import('./features/auth/login/login').then(m => m.LoginComponent),
+    canActivate: [guestGuard]
+  },
+  {
+    path: 'register',
+    loadComponent: () => import('./features/auth/register/register').then(m => m.RegisterComponent),
+    canActivate: [guestGuard]
+  },
+  {
+    path: '',
+    loadComponent: () => import('./layout/shell/shell').then(m => m.ShellComponent),
+    canActivate: [authGuard],
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./features/dashboard/dashboard').then(m => m.DashboardComponent)
+      },
+      {
+        path: 'attendance',
+        loadComponent: () => import('./features/attendance/attendance').then(m => m.AttendanceComponent)
+      },
+      {
+        path: 'leaves',
+        loadComponent: () => import('./features/leaves/leaves').then(m => m.LeavesComponent)
+      },
+      {
+        path: 'summary',
+        loadComponent: () => import('./features/summary/summary').then(m => m.SummaryComponent)
+      },
+      {
+        path: 'admin',
+        loadComponent: () => import('./features/admin/admin').then(m => m.AdminComponent),
+        canActivate: [adminGuard]
+      }
+    ]
+  },
+  {
+    path: '**',
+    redirectTo: 'dashboard'
+  }
+];

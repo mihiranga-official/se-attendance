@@ -1,0 +1,119 @@
+<div class="attendance-page">
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">Attendance Calendar</h1>
+      <p class="page-subtitle">Track and manage your daily attendance records</p>
+    </div>
+    <div class="calendar-nav">
+      <button class="btn-icon" (click)="prevMonth()" title="Previous Month">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </button>
+      <h2 class="current-month">{{ monthName }}</h2>
+      <button class="btn-icon" (click)="nextMonth()" title="Next Month">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="calendar-card">
+    <div class="calendar-grid">
+      <!-- Weekday headers -->
+      @for (day of weekDays; track day) {
+        <div class="weekday-header">{{ day }}</div>
+      }
+
+      <!-- Calendar days -->
+      @for (day of calendarDays(); track day.date) {
+        <div 
+          class="calendar-day" 
+          [class]="getDayClass(day)"
+          (click)="selectDay(day)"
+        >
+          <span class="day-number">{{ day.day }}</span>
+          
+          @if (day.isCurrentMonth) {
+            <div class="day-content">
+              @if (day.record) {
+                <div class="attendance-info">
+                  @if (day.record.checkIn) {
+                    <div class="time-mark in">
+                      <span class="dot"></span>
+                      <span>{{ day.record.checkIn }}</span>
+                    </div>
+                  }
+                  @if (day.record.checkOut) {
+                    <div class="time-mark out">
+                      <span class="dot"></span>
+                      <span>{{ day.record.checkOut }}</span>
+                    </div>
+                  }
+                </div>
+              } @else if (day.dayOfWeek === 0) {
+                <span class="day-label holiday">Sunday</span>
+              } @else if (day.dayOfWeek === 6) {
+                <span class="day-label halfday">Sat</span>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="calendar-legend">
+      <div class="legend-item"><span class="dot dot-completed"></span> Completed</div>
+      <div class="legend-item"><span class="dot dot-missing"></span> In Progress</div>
+      <div class="legend-item"><span class="dot dot-leave"></span> Leave</div>
+      <div class="legend-item"><span class="dot dot-holiday"></span> Weekend</div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  @if (showModal()) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Edit Attendance</h3>
+            <p>{{ formatSelectedDate() }}</p>
+          </div>
+          <button class="close-btn" (click)="closeModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (saveMsg()) {
+            <div class="alert alert-success">{{ saveMsg() }}</div>
+          }
+          @if (saveError()) {
+            <div class="alert alert-error">{{ saveError() }}</div>
+          }
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Check In Time</label>
+              <input type="time" [(ngModel)]="editCheckIn" class="input-field">
+            </div>
+            <div class="form-group">
+              <label>Check Out Time</label>
+              <input type="time" [(ngModel)]="editCheckOut" class="input-field">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea [(ngModel)]="editNotes" placeholder="Any additional notes..." class="input-field textarea"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="closeModal()">Cancel</button>
+          <button class="btn-primary" (click)="saveEntry()" [disabled]="isSaving()">
+            @if (isSaving()) { <span class="spinner"></span> }
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
