@@ -6,9 +6,10 @@
   --primary-hover: #1d4ed8;
   --primary-light: #eff6ff;
   
-  /* Neutral Colors */
+  /* Neutral Colors (Light Mode) */
   --bg-main: #f8fafc;
   --bg-card: #ffffff;
+  --bg-sidebar: #ffffff;
   --text-main: #1e293b;
   --text-muted: #64748b;
   --text-light: #94a3b8;
@@ -34,6 +35,27 @@
   /* Layout */
   --sidebar-width: 280px;
   --topbar-height: 70px;
+}
+
+body.dark-theme {
+  --bg-main: #0f172a;
+  --bg-card: #1e293b;
+  --bg-sidebar: #1e293b;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-light: #64748b;
+  --border: #334155;
+  
+  --primary-light: rgba(37, 99, 235, 0.15);
+  
+  --success-bg: rgba(34, 197, 94, 0.1);
+  --warning-bg: rgba(245, 158, 11, 0.1);
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --info-bg: rgba(59, 130, 246, 0.1);
+  
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
 }
 
 * {

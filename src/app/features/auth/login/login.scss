@@ -3,10 +3,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f0f4f8;
+  background-color: var(--bg-main);
   position: relative;
   overflow: hidden;
-  padding: 2rem;
+  padding: 1.5rem;
 }
 
 .auth-bg {
@@ -29,14 +29,14 @@
 .auth-card {
   width: 100%;
   max-width: 440px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--bg-card);
   backdrop-filter: blur(20px);
   padding: 3rem;
   border-radius: 30px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
   position: relative;
   z-index: 1;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border);
   animation: fadeIn 0.6s ease-out;
 }
 
@@ -56,11 +56,11 @@
     box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
   }
   
-  h1 { font-size: 1.5rem; color: #1e293b; margin: 0; line-height: 1.2; }
+  h1 { font-size: 1.5rem; color: var(--text-main); margin: 0; line-height: 1.2; }
   .subtitle { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; margin: 0; }
 }
 
-.form-title { font-size: 1.75rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem; }
+.form-title { font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem; }
 .form-desc { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; }
 
 .auth-form {
@@ -74,7 +74,7 @@
   flex-direction: column;
   gap: 8px;
   
-  label { font-size: 0.875rem; font-weight: 600; color: #475569; }
+  label { font-size: 0.875rem; font-weight: 600; color: var(--text-main); }
 }
 
 .input-wrapper {
@@ -93,8 +93,9 @@
   input {
     width: 100%;
     padding: 0.85rem 1rem 0.85rem 44px;
-    background: white;
-    border: 1.5px solid #e2e8f0;
+    background: var(--bg-main);
+    color: var(--text-main);
+    border: 1.5px solid var(--border);
     border-radius: 14px;
     font-size: 1rem;
     transition: all 0.2s;

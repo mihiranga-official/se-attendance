@@ -14,26 +14,27 @@
 .page-title {
   font-size: 2rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-main);
   margin: 0;
 }
 
 .page-subtitle {
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0.25rem 0 0 0;
 }
 
 .section-card {
-  background: white;
+  background: var(--bg-card);
   border-radius: 20px;
   padding: 1.5rem;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
 }
 
 .section-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-main);
   margin: 0 0 1.5rem 0;
 }
 
@@ -55,12 +56,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .applied-cell {
   font-size: 0.875rem;
-  color: #94a3b8;
+  color: var(--text-light);
 }
 
 .actions-col {
@@ -85,7 +86,7 @@
   align-items: center;
   justify-content: center;
   padding: 4rem 2rem;
-  color: #94a3b8;
+  color: var(--text-light);
   
   p { margin-top: 1rem; }
 }
@@ -106,59 +107,62 @@
 }
 
 .modal-card {
-  background: white;
-  width: 100%;
+  background: var(--bg-card);
+  width: 95%;
   max-width: 500px;
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
 }
 
 .modal-header {
   padding: 1.5rem;
-  background: #f8fafc;
+  background: var(--bg-main);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #f1f5f9;
-  h3 { margin: 0; font-size: 1.25rem; }
+  border-bottom: 1px solid var(--border);
+  h3 { margin: 0; font-size: 1.25rem; color: var(--text-main); }
 }
 
 .close-btn {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--text-light);
   cursor: pointer;
-  &:hover { color: #475569; }
+  &:hover { color: var(--text-main); }
 }
 
 .modal-body { padding: 1.5rem; }
 .modal-footer {
   padding: 1.25rem 1.5rem;
-  background: #f8fafc;
+  background: var(--bg-main);
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--border);
 }
 
 .form-group {
   margin-bottom: 1.25rem;
-  label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; color: #475569; }
+  label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-main); }
 }
 
 .input-field {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-main);
+  color: var(--text-main);
+  border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 1rem;
-  &:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+  &:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
   &.textarea { min-height: 100px; }
 }
 
 .btn-primary {
-  background: #2563eb;
+  background: var(--primary);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -168,18 +172,25 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  &:hover { background: #1d4ed8; }
+  &:hover { background: var(--primary-hover); }
   &:disabled { opacity: 0.7; }
 }
 
 .btn-secondary {
-  background: white;
-  color: #475569;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border);
   padding: 0.75rem 1.5rem;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
+  &:hover { background: var(--bg-main); }
+}
+
+@media (max-width: 768px) {
+  .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .section-card { padding: 1rem; }
+  .reason-cell { max-width: 150px; }
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

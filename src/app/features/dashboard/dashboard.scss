@@ -157,14 +157,14 @@
 }
 
 .stat-card {
-  background: white;
+  background: var(--bg-card);
   padding: 1.5rem;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--border);
   transition: transform 0.2s;
 
   &:hover { transform: translateY(-4px); }
@@ -196,10 +196,11 @@
 }
 
 .section-card {
-  background: white;
+  background: var(--bg-card);
   padding: 2rem;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
 }
 
 .section-title {

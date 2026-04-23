@@ -2,6 +2,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { InactivityService } from '../../core/services/inactivity.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -14,7 +15,9 @@ import { CommonModule } from '@angular/common';
 export class ShellComponent implements OnInit {
   auth = inject(AuthService);
   inactivity = inject(InactivityService);
+  theme = inject(ThemeService);
   sidebarOpen = signal(false);
+  dropdownOpen = signal(false);
 
   ngOnInit() {
     this.inactivity.startTracking();
@@ -26,6 +29,14 @@ export class ShellComponent implements OnInit {
 
   closeSidebar() {
     this.sidebarOpen.set(false);
+  }
+  
+  toggleDropdown() {
+    this.dropdownOpen.update(v => !v);
+  }
+
+  closeDropdown() {
+    this.dropdownOpen.set(false);
   }
 
   async logout() {
