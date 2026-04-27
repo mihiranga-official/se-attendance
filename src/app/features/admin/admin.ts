@@ -2,8 +2,9 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as XLSX from 'xlsx';
-import { ref, get, onValue } from 'firebase/database';
-import { database } from '../../core/firebase.config';
+import { ref, get, onValue, query, orderByChild, limitToLast } from 'firebase/database';
+import { database, functions } from '../../core/firebase.config';
+import { httpsCallable } from 'firebase/functions';
 import { UserService } from '../../core/services/user.service';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { LeaveService } from '../../core/services/leave.service';
@@ -23,20 +24,21 @@ export class AdminComponent implements OnInit {
   private leaveSvc = inject(LeaveService);
   private auth = inject(AuthService);
 
-  activeTab: 'users' | 'attendance' | 'leaves' = 'users';
+  activeTab: 'users' | 'attendance' | 'leaves' | 'notifications' = 'users';
   showPermissionHelp = signal(false);
   users = signal<UserProfile[]>([]);
   allLeaves = signal<{ uid: string; leaves: LeaveRecord[]; userName: string }[]>([]);
   allAttendance = signal<{ uid: string; records: AttendanceRecord[]; userName: string }[]>([]);
-  
+  notifications = signal<any[]>([]);
+
   isLoading = signal(false);
-  
+
   // Import states
   selectedImportUid = signal('');
   isImporting = signal(false);
   importLog = signal<string[]>([]);
   showImportModal = signal(false);
-  
+
   // Manual Entry states
   showManualModal = signal(false);
   manualData = signal({ uid: '', date: '', status: 'present', checkIn: '08:00', checkOut: '17:00', notes: '' });
@@ -51,7 +53,7 @@ export class AdminComponent implements OnInit {
   showUserImportModal = signal(false);
   isImportingUsers = signal(false);
   userImportLog = signal<string[]>([]);
-  
+
   async ngOnInit() {
     await this.loadData();
   }
@@ -66,7 +68,7 @@ export class AdminComponent implements OnInit {
         // Safety check: handle both Object and Array formats from Firebase
         const usersList = (Array.isArray(data) ? data : Object.values(data))
           .filter(u => u && typeof u === 'object') as UserProfile[];
-          
+
         console.log('Admin: Users list updated:', usersList.length);
         this.processUsers(usersList);
       }, (err) => {
@@ -78,12 +80,18 @@ export class AdminComponent implements OnInit {
       });
 
       // One-time fetch for records
-      const [leavesData, attendanceSnap] = await Promise.all([
+      const [leavesData, attendanceSnap, notificationsSnap] = await Promise.all([
         this.leaveSvc.getAllLeaves(),
-        get(ref(database, 'attendance'))
+        get(ref(database, 'attendance')),
+        get(ref(database, 'notifications'))
       ]);
 
       this.processRecords(leavesData, attendanceSnap);
+
+      if (notificationsSnap.exists()) {
+        const notifs = Object.entries(notificationsSnap.val()).map(([id, data]: [string, any]) => ({ id, ...data }));
+        this.notifications.set(notifs.sort((a, b) => b.sentAt - a.sentAt));
+      }
     } catch (e: any) {
       console.error(e);
       alert('Error loading data: ' + e.message);
@@ -164,10 +172,10 @@ export class AdminComponent implements OnInit {
         const wb: XLSX.WorkBook = XLSX.read(bstr, { type: 'binary' });
         const wsname: string = wb.SheetNames[0];
         const ws: XLSX.WorkSheet = wb.Sheets[wsname];
-        
+
         // Use sheet_to_json to handle all columns automatically
         const data: any[] = XLSX.utils.sheet_to_json(ws);
-        
+
         this.importLog.update(log => [...log, `Found ${data.length} rows. Processing...`]);
         await this.processImportData(data);
       } catch (err) {
@@ -203,7 +211,7 @@ export class AdminComponent implements OnInit {
           uid = existingUser.uid;
         } else {
           // AUTO-CREATE PROFILE
-          const newUserUid = `user_auto_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+          const newUserUid = `user_auto_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
           const email = `${nameVal.toLowerCase().replace(/\s+/g, '.')}@company.com`;
           const profile: UserProfile = {
             uid: newUserUid,
@@ -260,7 +268,7 @@ export class AdminComponent implements OnInit {
     }
 
     this.importLog.update(log => [
-      ...log, 
+      ...log,
       `Import complete: ${successCount} records saved.`,
       newUsersCount > 0 ? `${newUsersCount} new users auto-created.` : ''
     ].filter(Boolean));
@@ -312,7 +320,7 @@ export class AdminComponent implements OnInit {
         const wb: XLSX.WorkBook = XLSX.read(bstr, { type: 'binary' });
         const ws: XLSX.WorkSheet = wb.Sheets[wb.SheetNames[0]];
         const data: any[] = XLSX.utils.sheet_to_json(ws);
-        
+
         this.userImportLog.update(log => [...log, `Found ${data.length} rows. Processing...`]);
         await this.processUserImport(data);
       } catch (err) {
@@ -331,7 +339,7 @@ export class AdminComponent implements OnInit {
       const name = row['Name'] || row['name'];
       const email = row['Email'] || row['email'];
       const role = (row['Role'] || row['role'] || 'employee').toLowerCase() as 'admin' | 'employee';
-      const uid = row['UID'] || row['uid'] || `user_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+      const uid = row['UID'] || row['uid'] || `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
       if (!name || !email) continue;
 
@@ -387,7 +395,7 @@ export class AdminComponent implements OnInit {
   private parseExcelDate(val: any): string | null {
     try {
       if (!val) return null;
-      
+
       // Handle Excel Serial Dates (numbers)
       if (typeof val === 'number') {
         const d = XLSX.SSF.parse_date_code(val);
@@ -443,5 +451,27 @@ export class AdminComponent implements OnInit {
       absent: 'badge-danger'
     };
     return map[status] ?? 'badge-secondary';
+  }
+
+  isSendingReminder = signal(false);
+
+  async triggerManualReminder() {
+    if (!confirm('Are you sure you want to send a manual reminder to all pending employees right now?')) return;
+
+    this.isSendingReminder.set(true);
+    try {
+      const sendReminder = httpsCallable(functions, 'sendManualReminder');
+      const response: any = await sendReminder({
+        title: 'Admin Reminder',
+        body: 'Please check your attendance status. If you have not marked your attendance, please do so now.'
+      });
+      alert(response.data?.message || 'Reminder sent successfully.');
+      await this.loadData();
+    } catch (e: any) {
+      console.error('Manual reminder error:', e);
+      alert('Failed to send reminder. ' + e.message);
+    } finally {
+      this.isSendingReminder.set(false);
+    }
   }
 }

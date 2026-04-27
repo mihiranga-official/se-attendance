@@ -1,6 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
+import { getMessaging } from 'firebase/messaging';
+import { getFunctions } from 'firebase/functions';
 
 // Replace with your actual Firebase configuration
 export const firebaseConfig = {
@@ -16,3 +18,5 @@ export const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const database = getDatabase(app, firebaseConfig.databaseURL);
+export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
+export const functions = getFunctions(app); // Defaults to us-central1

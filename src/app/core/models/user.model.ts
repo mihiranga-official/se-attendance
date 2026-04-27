@@ -5,6 +5,7 @@ export interface UserProfile {
   role: 'admin' | 'employee';
   department?: string;
   position?: string;
+  fcmToken?: string;
   createdAt: string;
 }
 

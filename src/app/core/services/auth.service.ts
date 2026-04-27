@@ -13,10 +13,12 @@ import {
 import { ref, set, get } from 'firebase/database';
 import { auth, database } from '../firebase.config';
 import { UserProfile } from '../models/user.model';
+import { FcmService } from './fcm.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private router = inject(Router);
+  private fcmService = inject(FcmService);
 
   currentUser = signal<User | null>(null);
   userProfile = signal<UserProfile | null>(null);
@@ -27,6 +29,7 @@ export class AuthService {
       this.currentUser.set(user);
       if (user) {
         await this.loadUserProfile(user.uid);
+        this.fcmService.requestPermissionAndGetToken(user.uid);
       } else {
         this.userProfile.set(null);
       }
