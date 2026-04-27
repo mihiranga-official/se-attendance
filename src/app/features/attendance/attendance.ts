@@ -290,4 +290,25 @@ export class AttendanceComponent implements OnInit {
     if (!d) return '';
     return new Date(d.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   }
+
+  async removeAttendance() {
+    const uid = this.auth.currentUser()?.uid;
+    const day = this.selectedDay();
+    if (!uid || !day) return;
+
+    if (!confirm('Are you sure you want to remove this attendance record?')) return;
+
+    this.isSaving.set(true);
+    this.saveError.set('');
+    try {
+      await this.attendanceSvc.deleteAttendance(uid, day.date);
+      this.saveMsg.set('Attendance record removed successfully.');
+      await this.loadMonth();
+      setTimeout(() => this.closeModal(), 800);
+    } catch (e: any) {
+      this.saveError.set(e.message ?? 'Failed to remove record.');
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
 }

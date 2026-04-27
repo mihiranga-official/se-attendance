@@ -130,6 +130,12 @@
         </div>
 
         <div class="modal-footer">
+          <button class="btn-danger" (click)="removeAttendance()" [disabled]="isSaving()" title="Remove this attendance record">
+            @if (isSaving()) { <span class="spinner-sm"></span> }
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-9l-1 1H5v2h14V4z"/></svg>
+            <span>Remove</span>
+          </button>
+          <div class="spacer"></div>
           <button class="btn-secondary" (click)="closeModal()">Cancel</button>
           <button class="btn-primary" (click)="saveEntry()" [disabled]="isSaving()">
             @if (isSaving()) { <span class="spinner-sm"></span> }

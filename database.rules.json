@@ -1,0 +1,35 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
+        ".write": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
+        ".validate": "newData.hasChildren(['uid', 'email', 'displayName'])"
+      }
+    },
+    "attendance": {
+      "$uid": {
+        ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
+        ".write": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
+        "$date": {
+          ".validate": "newData.hasChildren(['date', 'status'])"
+        }
+      }
+    },
+    "leaves": {
+      "$uid": {
+        ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
+        ".write": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
+        "$leaveId": {
+          ".validate": "newData.hasChildren(['date', 'type', 'status'])"
+        }
+      }
+    },
+    "settings": {
+      ".read": "auth.uid !== null",
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    ".read": false,
+    ".write": false
+  }
+}

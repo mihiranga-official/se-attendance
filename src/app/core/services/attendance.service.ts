@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ref, set, get, update, onValue } from 'firebase/database';
+import { ref, set, get, update, remove, onValue } from 'firebase/database';
 import { database } from '../firebase.config';
 import { AttendanceRecord } from '../models/user.model';
 
@@ -73,6 +73,11 @@ export class AttendanceService {
       }
       await update(ref(database, path), merged);
     }
+  }
+
+  async deleteAttendance(uid: string, date: string): Promise<void> {
+    const path = `attendance/${uid}/${date}`;
+    await remove(ref(database, path));
   }
 
   async getAttendanceForMonth(uid: string, year: number, month: number): Promise<AttendanceRecord[]> {
