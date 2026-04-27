@@ -1,0 +1,68 @@
+<div class="bonus-card" [class.loading]="loading" [class.eligible]="data?.isEligible">
+  <div class="card-header">
+    <div class="header-left">
+      <div class="bonus-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
+        </svg>
+      </div>
+      <div class="title-group">
+        <h3 class="card-title">Bonus Eligibility Progress</h3>
+        <span class="period-badge">{{ periodTooltip }}</span>
+      </div>
+    </div>
+    <div class="status-badge" [class.eligible]="data?.isEligible">
+      @if (data?.isEligible) {
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+      </svg>
+      <span>Eligible for Bonus</span>
+      } @else {
+      <span>Not Yet Eligible</span>
+      }
+    </div>
+  </div>
+
+  <div class="card-body">
+    @if (loading) {
+    <div class="loading-skeleton">
+      <div class="skeleton-row"></div>
+      <div class="skeleton-bar"></div>
+    </div>
+    } @else {
+    <div class="stats-row">
+      <div class="stat-item">
+        <span class="label">Required Days</span>
+        <span class="value">{{ data?.requiredDays || 240 }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="label">Completed Days</span>
+        <span class="value primary">{{ data?.presentDays || 0 }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="label">Pending Days</span>
+        <span class="value" [class.warning]="!data?.isEligible" [class.success]="data?.isEligible">
+          {{ data?.pendingDays || 0 }}
+        </span>
+      </div>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-info">
+        <span class="percentage">{{ data?.percentage || 0 }}%</span>
+        <span class="days-left">
+          @if (data?.isEligible) {
+          Target achieved!
+          } @else {
+          {{ data?.pendingDays }} days to go
+          }
+        </span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" [style.width.%]="data?.percentage" [class.full]="data?.isEligible">
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+</div>

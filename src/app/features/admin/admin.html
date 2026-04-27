@@ -49,6 +49,9 @@
     <button [class.active]="activeTab === 'notifications'" (click)="activeTab = 'notifications'">
       Notification Logs
     </button>
+    <button [class.active]="activeTab === 'bonus'" (click)="activeTab = 'bonus'">
+      Bonus Eligibility
+    </button>
   </div>
 
   @if (isLoading()) {
@@ -186,6 +189,54 @@
           </table>
         </div>
       }
+
+      <!-- Bonus Tab -->
+      @if (activeTab === 'bonus') {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Completed</th>
+                <th>Pending</th>
+                <th>Target</th>
+                <th>Progress</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of bonusSummary(); track item.uid) {
+                <tr>
+                  <td class="name-cell">
+                    <span>{{ item.userName }}</span>
+                  </td>
+                  <td><strong>{{ item.progress.presentDays }}</strong> days</td>
+                  <td>{{ item.progress.pendingDays }} days</td>
+                  <td>{{ item.progress.requiredDays }} days</td>
+                  <td>
+                    <div class="mini-progress-bar">
+                      <div class="fill" [style.width.%]="item.progress.percentage" [class.full]="item.progress.isEligible"></div>
+                      <span class="pct">{{ item.progress.percentage }}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" [class.badge-success]="item.progress.isEligible" [class.badge-warning]="!item.progress.isEligible">
+                      {{ item.progress.isEligible ? 'Eligible' : 'Pending' }}
+                    </span>
+                  </td>
+                </tr>
+              }
+              @if (bonusSummary().length === 0) {
+                <tr>
+                  <td colspan="6" class="text-center" style="padding: 30px; color: var(--text-secondary);">No bonus eligibility data found.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
     <!-- System Diagnostics -->
   <!-- Permission Denied Help Modal -->
   @if (showPermissionHelp()) {
@@ -217,8 +268,6 @@
         </div>
       </div>
     </div>
-  }
-</div>
   }
 
   <!-- Import Modal -->
@@ -412,5 +461,6 @@
         </div>
       </div>
     </div>
+  }
   }
 </div>

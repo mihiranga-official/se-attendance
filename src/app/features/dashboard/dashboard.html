@@ -7,177 +7,209 @@
         <h1 class="hero-name">{{ auth.userProfile()?.name }}</h1>
         <p class="hero-date">{{ todayFormatted }}</p>
         <div class="hero-clock">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path
+              d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+          </svg>
           <span>{{ currentTime() }}</span>
           @if (isSunday) {
-            <span class="day-badge badge-holiday">Holiday</span>
+          <span class="day-badge badge-holiday">Holiday</span>
           } @else if (isSaturday) {
-            <span class="day-badge badge-halfday">Half Day</span>
+          <span class="day-badge badge-halfday">Half Day</span>
           }
         </div>
       </div>
       <div class="hero-right">
         <div class="check-actions">
           @if (!todayRecord()?.checkIn) {
-            <button class="btn-checkin" (click)="checkIn()" [disabled]="isCheckingIn() || isSunday" id="btn-checkin">
-              @if (isCheckingIn()) {
-                <span class="spinner"></span>
-              } @else {
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
-              }
-              <span>Check In</span>
-            </button>
+          <button class="btn-checkin" (click)="checkIn()" [disabled]="isCheckingIn() || isSunday" id="btn-checkin">
+            @if (isCheckingIn()) {
+            <span class="spinner"></span>
+            } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+              <path
+                d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+            </svg>
+            }
+            <span>Check In</span>
+          </button>
           } @else if (!todayRecord()?.checkOut) {
-            <button class="btn-checkout" (click)="checkOut()" [disabled]="isCheckingOut()" id="btn-checkout">
-              @if (isCheckingOut()) {
-                <span class="spinner"></span>
-              } @else {
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-5h2V7h-2v8z M8 7h2v8H8V7z"/></svg>
-              }
-              <span>Check Out</span>
-            </button>
+          <button class="btn-checkout" (click)="checkOut()" [disabled]="isCheckingOut()" id="btn-checkout">
+            @if (isCheckingOut()) {
+            <span class="spinner"></span>
+            } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-5h2V7h-2v8z M8 7h2v8H8V7z" />
+            </svg>
+            }
+            <span>Check Out</span>
+          </button>
           } @else {
-            <div class="completed-badge">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-              <span>Day Complete</span>
-            </div>
+          <div class="completed-badge">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+            </svg>
+            <span>Day Complete</span>
+          </div>
           }
         </div>
 
         @if (todayRecord()) {
-          <div class="today-times">
-            @if (todayRecord()?.checkIn) {
-              <div class="time-chip">
-                <span class="time-label">In</span>
-                <span class="time-value">{{ todayRecord()?.checkIn }}</span>
-              </div>
-            }
-            @if (todayRecord()?.checkOut) {
-              <div class="time-chip">
-                <span class="time-label">Out</span>
-                <span class="time-value">{{ todayRecord()?.checkOut }}</span>
-              </div>
-              <div class="time-chip">
-                <span class="time-label">Hours</span>
-                <span class="time-value">{{ todayRecord()?.workedHours?.toFixed(1) }}h</span>
-              </div>
-            }
+        <div class="today-times">
+          @if (todayRecord()?.checkIn) {
+          <div class="time-chip">
+            <span class="time-label">In</span>
+            <span class="time-value">{{ todayRecord()?.checkIn }}</span>
           </div>
+          }
+          @if (todayRecord()?.checkOut) {
+          <div class="time-chip">
+            <span class="time-label">Out</span>
+            <span class="time-value">{{ todayRecord()?.checkOut }}</span>
+          </div>
+          <div class="time-chip">
+            <span class="time-label">Hours</span>
+            <span class="time-value">{{ todayRecord()?.workedHours?.toFixed(1) }}h</span>
+          </div>
+          }
+        </div>
         }
       </div>
     </div>
 
     @if (actionMsg()) {
-      <div class="action-msg success">{{ actionMsg() }}</div>
+    <div class="action-msg success">{{ actionMsg() }}</div>
     }
     @if (actionError()) {
-      <div class="action-msg error">{{ actionError() }}</div>
+    <div class="action-msg error">{{ actionError() }}</div>
     }
   </div>
 
   <!-- Stats Cards -->
-  @if (monthlySummary()) {
-    <div class="stats-grid">
-      <div class="stat-card stat-present">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ monthlySummary()?.presentDays }}</span>
-          <span class="stat-label">Present Days</span>
-        </div>
+  <div class="stats-grid">
+    <app-bonus-card [data]="bonusProgress()" [loading]="isLoadingBonus()"></app-bonus-card>
+
+    @if (monthlySummary()) {
+    <div class="stat-card stat-present">
+      <div class="stat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+        </svg>
       </div>
-
-      @if (monthlySummary()?.extraDays && monthlySummary()!.extraDays > 0) {
-        <div class="stat-card stat-extra">
-          <div class="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ monthlySummary()?.extraDays }}</span>
-            <span class="stat-label">Extra Days</span>
-          </div>
-        </div>
-      }
-
-      <div class="stat-card stat-ot">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ monthlySummary()?.totalOTHours }}h</span>
-          <span class="stat-label">Overtime</span>
-        </div>
-      </div>
-
-      <div class="stat-card stat-leave">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/></svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ monthlySummary()?.leaveDays }}</span>
-          <span class="stat-label">Leave Days</span>
-        </div>
-      </div>
-
-      <div class="stat-card stat-percent">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ monthlySummary()?.attendancePercentage }}%</span>
-          <span class="stat-label">Attendance</span>
-        </div>
+      <div class="stat-info">
+        <span class="stat-value">{{ monthlySummary()?.presentDays }}</span>
+        <span class="stat-label">Present Days</span>
       </div>
     </div>
-  }
+
+    @if (monthlySummary()?.extraDays && monthlySummary()!.extraDays > 0) {
+    <div class="stat-card stat-extra">
+      <div class="stat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+        </svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">{{ monthlySummary()?.extraDays }}</span>
+        <span class="stat-label">Extra Days</span>
+      </div>
+    </div>
+    }
+
+
+    <div class="stat-card stat-leave">
+      <div class="stat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z" />
+        </svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">{{ monthlySummary()?.leaveDays }}</span>
+        <span class="stat-label">Leave Days</span>
+      </div>
+    </div>
+
+    <div class="stat-card stat-percent">
+      <div class="stat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+        </svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">{{ monthlySummary()?.attendancePercentage }}%</span>
+        <span class="stat-label">Attendance</span>
+      </div>
+    </div>
+
+    <div class="stat-card stat-ot">
+      <div class="stat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+        </svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">{{ monthlySummary()?.totalOTHours }}h</span>
+        <span class="stat-label">Overtime</span>
+      </div>
+    </div>
+    }
+  </div>
 
   <!-- Recent Activity -->
   <div class="section-card">
     <h2 class="section-title">Recent Activity</h2>
     @if (recentRecords().length === 0) {
-      <div class="empty-state">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-        <p>No attendance records yet this month.</p>
-      </div>
+    <div class="empty-state">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+        <path
+          d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+      </svg>
+      <p>No attendance records yet this month.</p>
+    </div>
     } @else {
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Check In</th>
-              <th>Check Out</th>
-              <th>Hours</th>
-              <th>OT</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (rec of recentRecords(); track rec.date) {
-              <tr>
-                <td class="date-cell">{{ formatDate(rec.date) }}</td>
-                <td>{{ rec.checkIn ?? '—' }}</td>
-                <td>
-                  {{ rec.checkOut ?? '—' }}
-                  @if (rec.checkIn && !rec.checkOut) {
-                    <span class="missing-badge">Missing</span>
-                  }
-                </td>
-                <td>{{ rec.workedHours ? rec.workedHours.toFixed(1) + 'h' : '—' }}</td>
-                <td>
-                  @if (rec.otHours && rec.otHours > 0) {
-                    <span class="ot-badge">+{{ rec.otHours.toFixed(1) }}h</span>
-                  } @else {
-                    —
-                  }
-                </td>
-                <td><span class="badge {{ getStatusClass(rec.status) }}">{{ rec.status }}</span></td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Hours</th>
+            <th>OT</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (rec of recentRecords(); track rec.date) {
+          <tr>
+            <td class="date-cell">{{ formatDate(rec.date) }}</td>
+            <td>{{ rec.checkIn ?? '—' }}</td>
+            <td>
+              {{ rec.checkOut ?? '—' }}
+              @if (rec.checkIn && !rec.checkOut) {
+              <span class="missing-badge">Missing</span>
+              }
+            </td>
+            <td>{{ rec.workedHours ? rec.workedHours.toFixed(1) + 'h' : '—' }}</td>
+            <td>
+              @if (rec.otHours && rec.otHours > 0) {
+              <span class="ot-badge">+{{ rec.otHours.toFixed(1) }}h</span>
+              } @else {
+              —
+              }
+            </td>
+            <td><span class="badge {{ getStatusClass(rec.status) }}">{{ rec.status }}</span></td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
     }
   </div>
 </div>

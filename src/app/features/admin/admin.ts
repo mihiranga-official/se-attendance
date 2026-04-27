@@ -8,8 +8,10 @@ import { httpsCallable } from 'firebase/functions';
 import { UserService } from '../../core/services/user.service';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { LeaveService } from '../../core/services/leave.service';
+import { BonusService } from '../../core/services/bonus.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UserProfile, AttendanceRecord, LeaveRecord } from '../../core/models/user.model';
+import { BonusProgress } from '../../shared/components/bonus-card/bonus-card';
 
 @Component({
   selector: 'app-admin',
@@ -22,13 +24,15 @@ export class AdminComponent implements OnInit {
   private userSvc = inject(UserService);
   private attendSvc = inject(AttendanceService);
   private leaveSvc = inject(LeaveService);
+  private bonusSvc = inject(BonusService);
   private auth = inject(AuthService);
 
-  activeTab: 'users' | 'attendance' | 'leaves' | 'notifications' = 'users';
+  activeTab: 'users' | 'attendance' | 'leaves' | 'notifications' | 'bonus' = 'users';
   showPermissionHelp = signal(false);
   users = signal<UserProfile[]>([]);
   allLeaves = signal<{ uid: string; leaves: LeaveRecord[]; userName: string }[]>([]);
   allAttendance = signal<{ uid: string; records: AttendanceRecord[]; userName: string }[]>([]);
+  bonusSummary = signal<{ uid: string; userName: string; progress: BonusProgress }[]>([]);
   notifications = signal<any[]>([]);
 
   isLoading = signal(false);
@@ -110,12 +114,20 @@ export class AdminComponent implements OnInit {
     const users = this.users();
 
     const attendanceData: Record<string, AttendanceRecord[]> = {};
+    const bonusList: { uid: string; userName: string; progress: BonusProgress }[] = [];
     const discoveredUids = new Set<string>();
 
     for (const uid in attendanceDataRaw) {
       discoveredUids.add(uid);
-      attendanceData[uid] = Object.values(attendanceDataRaw[uid] as Record<string, AttendanceRecord>)
-        .filter(r => r.date.startsWith(prefix));
+      const userRecords = attendanceDataRaw[uid] as Record<string, AttendanceRecord>;
+      attendanceData[uid] = Object.values(userRecords).filter(r => r.date.startsWith(prefix));
+      
+      const user = users.find(u => u.uid === uid);
+      bonusList.push({
+        uid,
+        userName: user?.name ?? `User (${uid.slice(-4)})`,
+        progress: this.bonusSvc.calculateBonusFromRecords(userRecords)
+      });
     }
 
     for (const uid in leavesData) discoveredUids.add(uid);
@@ -130,6 +142,7 @@ export class AdminComponent implements OnInit {
       });
     }
     this.allAttendance.set(attendList);
+    this.bonusSummary.set(bonusList.sort((a, b) => b.progress.presentDays - a.progress.presentDays));
 
     const leavesList = [];
     for (const uid in leavesData) {
