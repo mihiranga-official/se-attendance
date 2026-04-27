@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendManualReminder = exports.finalReminder = exports.midReminder = exports.morningReminder = void 0;
+exports.sendBroadcastNotification = exports.sendManualReminder = exports.finalReminder = exports.midReminder = exports.morningReminder = void 0;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 admin.initializeApp();
@@ -119,7 +119,6 @@ exports.finalReminder = functions.pubsub
 });
 // Manual HTTP trigger for admin testing (Send Reminder Now)
 exports.sendManualReminder = functions.https.onCall(async (data, context) => {
-    // Add authentication check if necessary
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "Must be logged in.");
     }
@@ -127,5 +126,46 @@ exports.sendManualReminder = functions.https.onCall(async (data, context) => {
     const body = data.body || "Please check your attendance status.";
     await sendAttendanceReminders(title, body);
     return { success: true, message: "Manual reminder triggered." };
+});
+// Broadcast notification to ALL active users (Ignore attendance)
+exports.sendBroadcastNotification = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Must be logged in.");
+    }
+    const title = data.title || "Company Announcement";
+    const body = data.body || "Please check the latest updates.";
+    try {
+        const usersSnap = await db.ref("users").once("value");
+        if (!usersSnap.exists())
+            return { success: false, message: "No users found" };
+        const users = usersSnap.val();
+        const allTokens = [];
+        for (const user of Object.values(users)) {
+            if (user.fcmToken) {
+                allTokens.push(user.fcmToken);
+            }
+        }
+        if (allTokens.length === 0)
+            return { success: false, message: "No users with FCM tokens" };
+        const message = {
+            notification: { title, body },
+            tokens: allTokens,
+        };
+        const response = await admin.messaging().sendEachForMulticast(message);
+        // Log it
+        await db.ref("notifications").push().set({
+            title,
+            message: body,
+            sentCount: response.successCount,
+            failedCount: response.failureCount,
+            sentAt: admin.database.ServerValue.TIMESTAMP,
+            type: "broadcast_message"
+        });
+        return { success: true, message: `Broadcast sent to ${response.successCount} users.` };
+    }
+    catch (error) {
+        console.error("Broadcast error:", error);
+        throw new functions.https.HttpsError("internal", "Failed to send broadcast");
+    }
 });
 //# sourceMappingURL=index.js.map

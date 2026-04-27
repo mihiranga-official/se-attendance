@@ -161,7 +161,6 @@ export const finalReminder = functions.pubsub
 
 // Manual HTTP trigger for admin testing (Send Reminder Now)
 export const sendManualReminder = functions.https.onCall(async (data, context) => {
-  // Add authentication check if necessary
   if (!context.auth) {
     throw new functions.https.HttpsError("unauthenticated", "Must be logged in.");
   }
@@ -171,4 +170,52 @@ export const sendManualReminder = functions.https.onCall(async (data, context) =
 
   await sendAttendanceReminders(title, body);
   return { success: true, message: "Manual reminder triggered." };
+});
+
+// Broadcast notification to ALL active users (Ignore attendance)
+export const sendBroadcastNotification = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Must be logged in.");
+  }
+  
+  const title = data.title || "Company Announcement";
+  const body = data.body || "Please check the latest updates.";
+
+  try {
+    const usersSnap = await db.ref("users").once("value");
+    if (!usersSnap.exists()) return { success: false, message: "No users found" };
+
+    const users: Record<string, UserProfile> = usersSnap.val();
+    const allTokens: string[] = [];
+
+    for (const user of Object.values(users)) {
+      if (user.fcmToken) {
+        allTokens.push(user.fcmToken);
+      }
+    }
+
+    if (allTokens.length === 0) return { success: false, message: "No users with FCM tokens" };
+
+    const message = {
+      notification: { title, body },
+      tokens: allTokens,
+    };
+
+    const response = await admin.messaging().sendEachForMulticast(message);
+    
+    // Log it
+    await db.ref("notifications").push().set({
+      title,
+      message: body,
+      sentCount: response.successCount,
+      failedCount: response.failureCount,
+      sentAt: admin.database.ServerValue.TIMESTAMP,
+      type: "broadcast_message"
+    });
+
+    return { success: true, message: `Broadcast sent to ${response.successCount} users.` };
+  } catch (error) {
+    console.error("Broadcast error:", error);
+    throw new functions.https.HttpsError("internal", "Failed to send broadcast");
+  }
 });

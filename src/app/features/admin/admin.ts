@@ -474,4 +474,27 @@ export class AdminComponent implements OnInit {
       this.isSendingReminder.set(false);
     }
   }
+
+  async triggerBroadcastReminder() {
+    const title = prompt('Enter notification title:', 'Company Announcement');
+    if (!title) return;
+    
+    const body = prompt('Enter notification message:', 'Please check the latest updates.');
+    if (!body) return;
+
+    if (!confirm('Are you sure you want to broadcast this to ALL users?')) return;
+    
+    this.isSendingReminder.set(true);
+    try {
+      const sendBroadcast = httpsCallable(functions, 'sendBroadcastNotification');
+      const response: any = await sendBroadcast({ title, body });
+      alert(response.data?.message || 'Broadcast sent successfully.');
+      await this.loadData();
+    } catch (e: any) {
+      console.error('Broadcast reminder error:', e);
+      alert('Failed to send broadcast. ' + e.message);
+    } finally {
+      this.isSendingReminder.set(false);
+    }
+  }
 }
