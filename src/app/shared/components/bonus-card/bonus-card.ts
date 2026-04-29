@@ -9,6 +9,14 @@ export interface BonusProgress {
   startDate: Date;
   endDate: Date;
   percentage: number;
+  // New tiered bonus fields
+  halfBonusThreshold: number;
+  fullBonusThreshold: number;
+  halfBonusEligible: boolean;
+  fullBonusEligible: boolean;
+  daysUntilHalfBonus: number;
+  daysUntilFullBonus: number;
+  currentBonus: 'none' | 'half' | 'full';
 }
 
 @Component({
@@ -27,5 +35,19 @@ export class BonusCardComponent {
     const start = this.data.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const end = this.data.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     return `Period: ${start} - ${end}`;
+  }
+
+  get bonusStatusText(): string {
+    if (!this.data) return 'No Bonus';
+    if (this.data.currentBonus === 'full') return '🏆 Full Bonus';
+    if (this.data.currentBonus === 'half') return '🎁 Half Bonus';
+    return '❌ Not Yet Eligible';
+  }
+
+  get bonusStatusClass(): string {
+    if (!this.data) return 'status-none';
+    if (this.data.currentBonus === 'full') return 'status-full';
+    if (this.data.currentBonus === 'half') return 'status-half';
+    return 'status-none';
   }
 }

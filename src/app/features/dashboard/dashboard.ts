@@ -4,6 +4,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { SummaryService } from '../../core/services/summary.service';
 import { BonusService } from '../../core/services/bonus.service';
+import { CelebrationService } from '../../core/services/celebration.service';
 import { AttendanceRecord, MonthlySummary } from '../../core/models/user.model';
 import { BonusCardComponent, BonusProgress } from '../../shared/components/bonus-card/bonus-card';
 
@@ -19,6 +20,7 @@ export class DashboardComponent implements OnInit {
   private attendanceSvc = inject(AttendanceService);
   private summarySvc = inject(SummaryService);
   private bonusSvc = inject(BonusService);
+  private celebrationSvc = inject(CelebrationService);
 
   today = new Date();
   todayStr = this.attendanceSvc.getTodayStr();
@@ -74,6 +76,9 @@ export class DashboardComponent implements OnInit {
     this.bonusProgress.set(bonus);
     this.recentRecords.set(recent.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7));
     this.isLoadingBonus.set(false);
+
+    // Check for milestone celebration
+    this.checkBonusCelebration(bonus);
   }
 
   async checkIn() {
@@ -110,10 +115,34 @@ export class DashboardComponent implements OnInit {
       this.bonusProgress.set(bonus);
       this.actionMsg.set(`✓ Checked out at ${rec?.checkOut} | Worked: ${rec?.workedHours?.toFixed(2)}h | OT: ${rec?.otHours?.toFixed(2)}h`);
       await this.refreshSummary();
+
+      // Check for celebration after checkout as it might have pushed them over the threshold
+      this.checkBonusCelebration(bonus);
     } catch (e: any) {
       this.actionError.set(e.message);
     } finally {
       this.isCheckingOut.set(false);
+    }
+  }
+
+  private checkBonusCelebration(bonus: BonusProgress | null) {
+    if (!bonus) return;
+    const uid = this.auth.currentUser()?.uid;
+    if (!uid) return;
+
+    const currentYear = new Date().getFullYear();
+    const storageKey = `celebration_shown_${uid}_${currentYear}`;
+    const shown = JSON.parse(localStorage.getItem(storageKey) || '{"half": false, "full": false}');
+
+    if (bonus.fullBonusEligible && !shown.full) {
+      this.celebrationSvc.showCelebration('full');
+      shown.full = true;
+      shown.half = true; // Also mark half as shown if they somehow jump straight to full
+      localStorage.setItem(storageKey, JSON.stringify(shown));
+    } else if (bonus.halfBonusEligible && !shown.half) {
+      this.celebrationSvc.showCelebration('half');
+      shown.half = true;
+      localStorage.setItem(storageKey, JSON.stringify(shown));
     }
   }
 

@@ -5,6 +5,8 @@ import { AttendanceRecord } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class BonusService {
+  private readonly HALF_BONUS_THRESHOLD = 200;
+  private readonly FULL_BONUS_THRESHOLD = 240;
 
   getFinancialYearRange(date: Date = new Date()) {
     const year = date.getFullYear();
@@ -55,10 +57,26 @@ export class BonusService {
     });
 
     const presentDays = bonusDays.length;
-    const requiredDays = 240;
-    const pendingDays = Math.max(0, requiredDays - presentDays);
-    const isEligible = presentDays >= requiredDays;
-    const percentage = Math.min(100, Math.round((presentDays / requiredDays) * 100));
+    
+    // Tiered bonus calculation
+    const halfBonusEligible = presentDays >= this.HALF_BONUS_THRESHOLD;
+    const fullBonusEligible = presentDays >= this.FULL_BONUS_THRESHOLD;
+    
+    let currentBonus: 'none' | 'half' | 'full' = 'none';
+    if (fullBonusEligible) {
+      currentBonus = 'full';
+    } else if (halfBonusEligible) {
+      currentBonus = 'half';
+    }
+    
+    const daysUntilHalfBonus = Math.max(0, this.HALF_BONUS_THRESHOLD - presentDays);
+    const daysUntilFullBonus = Math.max(0, this.FULL_BONUS_THRESHOLD - presentDays);
+    
+    // For backward compatibility
+    const requiredDays = this.FULL_BONUS_THRESHOLD;
+    const pendingDays = daysUntilFullBonus;
+    const isEligible = fullBonusEligible;
+    const percentage = Math.min(100, Math.round((presentDays / this.FULL_BONUS_THRESHOLD) * 100));
 
     return {
       presentDays,
@@ -67,7 +85,15 @@ export class BonusService {
       isEligible,
       startDate,
       endDate,
-      percentage
+      percentage,
+      // New tiered fields
+      halfBonusThreshold: this.HALF_BONUS_THRESHOLD,
+      fullBonusThreshold: this.FULL_BONUS_THRESHOLD,
+      halfBonusEligible,
+      fullBonusEligible,
+      daysUntilHalfBonus,
+      daysUntilFullBonus,
+      currentBonus
     };
   }
 

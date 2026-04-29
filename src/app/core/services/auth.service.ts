@@ -40,7 +40,7 @@ export class AuthService {
   async login(email: string, password: string): Promise<void> {
     const cleanEmail = email.trim();
     const cleanPassword = password.trim();
-    console.log('Login attempt:', { cleanEmail, cleanPassword });
+    // console.log('Login attempt:', { cleanEmail, cleanPassword });
 
     // Hardcoded Master Logins (DA/DA or admin/admin)
     if ((cleanEmail === 'DA' && cleanPassword === 'DA') || (cleanEmail === 'admin' && cleanPassword === 'admin')) {

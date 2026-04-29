@@ -1,4 +1,4 @@
-<div class="bonus-card" [class.loading]="loading" [class.eligible]="data?.isEligible">
+<div class="bonus-card" [class.loading]="loading" [ngClass]="bonusStatusClass">
   <div class="card-header">
     <div class="header-left">
       <div class="bonus-icon">
@@ -7,19 +7,12 @@
         </svg>
       </div>
       <div class="title-group">
-        <h3 class="card-title">Bonus Eligibility Progress</h3>
+        <h3 class="card-title">Bonus Eligibility Status</h3>
         <span class="period-badge">{{ periodTooltip }}</span>
       </div>
     </div>
-    <div class="status-badge" [class.eligible]="data?.isEligible">
-      @if (data?.isEligible) {
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-      </svg>
-      <span>Eligible for Bonus</span>
-      } @else {
-      <span>Not Yet Eligible</span>
-      }
+    <div class="status-badge" [ngClass]="bonusStatusClass">
+      <span>{{ bonusStatusText }}</span>
     </div>
   </div>
 
@@ -30,37 +23,79 @@
       <div class="skeleton-bar"></div>
     </div>
     } @else {
-    <div class="stats-row">
-      <div class="stat-item">
-        <span class="label">Required Days</span>
-        <span class="value">{{ data?.requiredDays || 240 }}</span>
+    <div class="bonus-tiers-row">
+      <!-- Attendance Days Summary -->
+      <div class="attendance-summary">
+        <div class="summary-stat">
+          <span class="summary-label">Attendance Days Completed</span>
+          <span class="summary-value">{{ data?.presentDays || 0 }} days</span>
+        </div>
       </div>
-      <div class="stat-item">
-        <span class="label">Completed Days</span>
-        <span class="value primary">{{ data?.presentDays || 0 }}</span>
+
+      <!-- Half Bonus Tier (200 days) -->
+      <div class="bonus-tier half-bonus">
+        <div class="tier-header">
+          <span class="tier-label">
+            <span class="tier-icon">🎁</span>
+            Half Bonus (200 Days)
+          </span>
+          <span class="tier-status" [class.eligible]="data?.halfBonusEligible">
+            @if (data?.halfBonusEligible) {
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+            </svg>
+            <span>Eligible</span>
+            } @else {
+            <span>{{ data?.daysUntilHalfBonus }} days left</span>
+            }
+          </span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" 
+               [style.width.%]="(data?.presentDays! / (data?.halfBonusThreshold || 200) * 100) | number:'1.0-0'"
+               [class.complete]="data?.halfBonusEligible">
+          </div>
+        </div>
       </div>
-      <div class="stat-item">
-        <span class="label">Pending Days</span>
-        <span class="value" [class.warning]="!data?.isEligible" [class.success]="data?.isEligible">
-          {{ data?.pendingDays || 0 }}
-        </span>
+
+      <!-- Full Bonus Tier (240 days) -->
+      <div class="bonus-tier full-bonus">
+        <div class="tier-header">
+          <span class="tier-label">
+            <span class="tier-icon">🏆</span>
+            Full Bonus (240 Days)
+          </span>
+          <span class="tier-status" [class.eligible]="data?.fullBonusEligible">
+            @if (data?.fullBonusEligible) {
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+            </svg>
+            <span>Eligible</span>
+            } @else {
+            <span>{{ data?.daysUntilFullBonus }} days left</span>
+            }
+          </span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" 
+               [style.width.%]="(data?.presentDays! / (data?.fullBonusThreshold || 240) * 100) | number:'1.0-0'"
+               [class.complete]="data?.fullBonusEligible">
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="progress-section">
+    <!-- Overall Progress -->
+    <div class="overall-progress">
+      <div class="progress-percentage">{{ data?.percentage || 0 }}%</div>
       <div class="progress-info">
-        <span class="percentage">{{ data?.percentage || 0 }}%</span>
-        <span class="days-left">
-          @if (data?.isEligible) {
-          Target achieved!
-          } @else {
-          {{ data?.pendingDays }} days to go
-          }
-        </span>
-      </div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" [style.width.%]="data?.percentage" [class.full]="data?.isEligible">
-        </div>
+        @if (data?.fullBonusEligible) {
+        <span class="progress-text success">🎉 Full bonus target achieved!</span>
+        } @else if (data?.halfBonusEligible) {
+        <span class="progress-text info">Half bonus achieved! {{ data?.daysUntilFullBonus }} days until full bonus</span>
+        } @else {
+        <span class="progress-text warning">{{ data?.daysUntilHalfBonus }} days until half bonus eligibility</span>
+        }
       </div>
     </div>
     }
