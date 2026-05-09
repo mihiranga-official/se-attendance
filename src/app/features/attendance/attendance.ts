@@ -141,7 +141,7 @@ export class AttendanceComponent implements OnInit {
   selectDay(day: CalendarDay) {
     if (!day.isCurrentMonth) return;
     this.selectedDay.set(day);
-    
+
     // Set default times if no record exists, otherwise use existing record
     this.editCheckIn = day.record?.checkIn ?? '08:00';
     this.editCheckOut = day.record?.checkOut ?? '17:00';
@@ -257,7 +257,7 @@ export class AttendanceComponent implements OnInit {
         type: 'full',
         reason: 'Marked from Calendar'
       });
-      
+
       await this.loadMonth();
       this.closeModal();
     } catch (e: any) {
@@ -281,7 +281,7 @@ export class AttendanceComponent implements OnInit {
 
   getDayTypeLabel(day: CalendarDay): string {
     if (day.dayOfWeek === 0) return 'Holiday';
-    if (day.dayOfWeek === 6) return 'Half Day';
+    if (day.dayOfWeek === 6) return 'Full Day';
     return '';
   }
 
@@ -301,7 +301,18 @@ export class AttendanceComponent implements OnInit {
     this.isSaving.set(true);
     this.saveError.set('');
     try {
-      await this.attendanceSvc.deleteAttendance(uid, day.date);
+      if (day.record) {
+        await this.attendanceSvc.deleteAttendance(uid, day.date);
+      }
+      if (day.leave) {
+        await this.leaveSvc.deleteLeave(uid, day.leave.leaveId);
+      }
+
+      // Also catch if neither existed, but the user clicked remove
+      if (!day.record && !day.leave) {
+        await this.attendanceSvc.deleteAttendance(uid, day.date); // Fallback
+      }
+
       this.saveMsg.set('Attendance record removed successfully.');
       await this.loadMonth();
       setTimeout(() => this.closeModal(), 800);

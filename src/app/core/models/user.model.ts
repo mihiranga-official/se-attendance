@@ -17,6 +17,11 @@ export interface AttendanceRecord {
   otHours?: number;
   status: 'present' | 'absent' | 'leave' | 'half-day' | 'holiday' | 'weekend';
   notes?: string;
+  isLate?: boolean;
+  lateMinutes?: number;
+  lostFullDay?: boolean;
+  lostBonus?: boolean;
+  isSaturdayViolation?: boolean;
 }
 
 export interface LeaveRecord {
@@ -41,4 +46,8 @@ export interface MonthlySummary {
   totalOTHours: number;
   extraDays: number;
   attendancePercentage: number;
+  lateDays: number;
+  totalLateMinutes: number;
+  saturdayViolations: number;
+  bonusLostDays: number;
 }

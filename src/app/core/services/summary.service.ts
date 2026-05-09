@@ -24,6 +24,10 @@ export class SummaryService {
     let halfDays = 0;
     let totalOTHours = 0;
     let extraDays = 0;
+    let lateDays = 0;
+    let totalLateMinutes = 0;
+    let saturdayViolations = 0;
+    let bonusLostDays = 0;
 
     for (const day of workingDays) {
       const rec = recordMap.get(day);
@@ -40,6 +44,17 @@ export class SummaryService {
       } else if (rec.status === 'present' || rec.checkIn) {
         presentDays++;
         totalOTHours += rec.otHours ?? 0;
+        
+        if (rec.isLate) {
+          lateDays++;
+          totalLateMinutes += rec.lateMinutes ?? 0;
+        }
+        if (rec.isSaturdayViolation) {
+          saturdayViolations++;
+        }
+        if (rec.lostBonus) {
+          bonusLostDays++;
+        }
       }
     }
 
@@ -62,7 +77,11 @@ export class SummaryService {
       absentDays, leaveDays, halfDays,
       totalOTHours: parseFloat(totalOTHours.toFixed(2)),
       extraDays,
-      attendancePercentage
+      attendancePercentage,
+      lateDays,
+      totalLateMinutes,
+      saturdayViolations,
+      bonusLostDays
     };
   }
 

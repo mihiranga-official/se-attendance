@@ -11,12 +11,45 @@ const SATURDAY_END = '13:00';
 export class AttendanceService {
 
   private toMinutes(time: string): number {
+    if (!time) return 0;
     const [h, m] = time.split(':').map(Number);
     return h * 60 + m;
   }
 
   private toHours(minutes: number): number {
     return parseFloat((minutes / 60).toFixed(2));
+  }
+
+  private calculateLateStatus(record: Partial<AttendanceRecord>): void {
+    if (!record.checkIn) return;
+
+    const inMin = this.toMinutes(record.checkIn);
+    const startMin = this.toMinutes(WORK_START);
+
+    if (inMin > startMin) {
+      record.isLate = true;
+      record.lateMinutes = inMin - startMin;
+
+      const dayType = record.date ? this.getDayType(record.date) : 'weekday';
+
+      if (dayType === 'saturday') {
+        record.lostFullDay = true;
+        record.lostBonus = true;
+        record.isSaturdayViolation = true;
+      } else if (dayType === 'weekday') {
+        record.lostBonus = true; // Lose bonus for being late
+        // Example: if excessive late (e.g. > 120 mins), maybe lostFullDay = true. 
+        // Based on rules: "Lose full-day eligibility, Lose daily bonus eligibility"
+        // Let's mark lostBonus = true, and lostFullDay if they are late.
+        record.lostFullDay = true;
+      }
+    } else {
+      record.isLate = false;
+      record.lateMinutes = 0;
+      record.lostBonus = false;
+      record.lostFullDay = false;
+      record.isSaturdayViolation = false;
+    }
   }
 
   getDayType(dateStr: string): 'weekday' | 'saturday' | 'sunday' {
@@ -52,6 +85,7 @@ export class AttendanceService {
 
   async saveAttendance(uid: string, record: AttendanceRecord): Promise<void> {
     const path = `attendance/${uid}/${record.date}`;
+    this.calculateLateStatus(record);
     if (record.checkIn && record.checkOut) {
       const calc = this.calculateHours(record.checkIn, record.checkOut, record.date);
       record.workedHours = calc.workedHours;
@@ -66,6 +100,7 @@ export class AttendanceService {
     if (snap.exists()) {
       const existing = snap.val() as AttendanceRecord;
       const merged = { ...existing, ...changes };
+      this.calculateLateStatus(merged);
       if (merged.checkIn && merged.checkOut) {
         const calc = this.calculateHours(merged.checkIn, merged.checkOut, date);
         merged.workedHours = calc.workedHours;

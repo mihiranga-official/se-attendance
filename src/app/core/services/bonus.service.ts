@@ -57,21 +57,21 @@ export class BonusService {
     });
 
     const presentDays = bonusDays.length;
-    
+
     // Tiered bonus calculation
     const halfBonusEligible = presentDays >= this.HALF_BONUS_THRESHOLD;
     const fullBonusEligible = presentDays >= this.FULL_BONUS_THRESHOLD;
-    
+
     let currentBonus: 'none' | 'half' | 'full' = 'none';
     if (fullBonusEligible) {
       currentBonus = 'full';
     } else if (halfBonusEligible) {
       currentBonus = 'half';
     }
-    
+
     const daysUntilHalfBonus = Math.max(0, this.HALF_BONUS_THRESHOLD - presentDays);
     const daysUntilFullBonus = Math.max(0, this.FULL_BONUS_THRESHOLD - presentDays);
-    
+
     // For backward compatibility
     const requiredDays = this.FULL_BONUS_THRESHOLD;
     const pendingDays = daysUntilFullBonus;

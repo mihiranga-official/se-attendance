@@ -1,0 +1,101 @@
+@if (loading) {
+<div class="attendance-card skeleton">
+  <div class="skeleton-header"></div>
+  <div class="skeleton-body"></div>
+</div>
+} @else {
+<div class="attendance-card" [class.is-late]="isLate">
+  <div class="card-header">
+    <div class="header-left">
+      <h3>Today's Status</h3>
+      <span class="status-badge" [class.late]="isLate" [class.on-time]="!isLate && todayRecord?.checkIn" [class.pending]="!todayRecord?.checkIn">
+        @if (isLate) {
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+          Late
+        } @else if (todayRecord?.checkIn) {
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          On Time
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+          </svg>
+          Pending
+        }
+      </span>
+    </div>
+    <div class="score-circle">
+      <svg viewBox="0 0 36 36" class="circular-chart">
+        <path class="circle-bg"
+          d="M18 2.0845
+            a 15.9155 15.9155 0 0 1 0 31.831
+            a 15.9155 15.9155 0 0 1 0 -31.831"
+        />
+        <path class="circle"
+          [attr.stroke-dasharray]="attendanceScore + ', 100'"
+          d="M18 2.0845
+            a 15.9155 15.9155 0 0 1 0 31.831
+            a 15.9155 15.9155 0 0 1 0 -31.831"
+        />
+        <text x="18" y="20.35" class="percentage">{{ attendanceScore }}%</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="card-grid">
+    <div class="stat-box">
+      <div class="stat-label">Check-In Time</div>
+      <div class="stat-value highlight">{{ checkInTime }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Full Day</div>
+      <div class="stat-value" [class.warning]="!fullDayEligible">
+        {{ fullDayEligible ? 'Eligible' : 'Lost' }}
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="monthly-stats">
+    <h4>Monthly Policy Tracker</h4>
+    <div class="tracker-list">
+      <div class="tracker-item" [class.danger]="totalLateDays > 0">
+        <span class="label">Late Days</span>
+        <span class="value">{{ totalLateDays }}</span>
+      </div>
+      <div class="tracker-item" [class.danger]="monthlySummary?.totalLateMinutes && monthlySummary!.totalLateMinutes > 0">
+        <span class="label">Total Late Time</span>
+        <span class="value">{{ totalLateHoursFormatted }}</span>
+      </div>
+      <div class="tracker-item" [class.warning]="bonusLostDays > 0">
+        <span class="label">Bonus Lost Days</span>
+        <span class="value">{{ bonusLostDays }}</span>
+      </div>
+      <div class="tracker-item" [class.danger]="saturdayViolationsTotal > 0">
+        <span class="label">Saturday Violations</span>
+        <span class="value">{{ saturdayViolationsTotal }}</span>
+      </div>
+    </div>
+  </div>
+
+  @if (isLate || isSaturdayViolation) {
+  <div class="warning-banner">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+    </svg>
+    <div>
+      <strong>Violation:</strong>
+      @if (isSaturdayViolation) {
+        Late arrival on Saturday. Full day and bonus eligibility removed.
+      } @else {
+        Late arrival recorded ({{ todayRecord?.lateMinutes }}m late). Full day and bonus eligibility removed.
+      }
+    </div>
+  </div>
+  }
+</div>
+}

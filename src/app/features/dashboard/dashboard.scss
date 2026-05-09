@@ -80,7 +80,7 @@
     color: #fecaca;
   }
 
-  &.badge-halfday {
+  &.badge-working {
     background: rgba(59, 130, 246, 0.2);
     color: #bfdbfe;
   }
@@ -165,8 +165,15 @@
   font-size: 0.8rem;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
 
   .time-label {
     opacity: 0.6;
@@ -176,6 +183,87 @@
   .time-value {
     font-weight: 700;
   }
+
+  .edit-hint {
+    opacity: 0.4;
+  }
+}
+
+.edit-times-form {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.edit-inputs {
+  display: flex;
+  gap: 1rem;
+}
+
+.edit-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .edit-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0.7;
+    text-transform: uppercase;
+  }
+
+  .edit-input {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    color-scheme: dark;
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: rgba(255, 255, 255, 0.15);
+    }
+  }
+}
+
+.edit-actions {
+  display: flex;
+  gap: 6px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-save-edit,
+.btn-cancel-edit {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-save-edit {
+  background: #22c55e;
+  color: white;
+  &:hover { background: #16a34a; }
+}
+
+.btn-cancel-edit {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  &:hover { background: rgba(255, 255, 255, 0.2); }
 }
 
 .action-msg {
@@ -197,58 +285,63 @@
   }
 }
 
-.stats-grid {
+.dashboard-main-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-areas:
-    "bonus present"
-    "bonus leave"
-    "percent ot"
-    "extra extra";
-  gap: 1.25rem;
+  gap: 1.5rem;
   margin-bottom: 2rem;
 }
 
-app-bonus-card {
-  grid-area: bonus;
+.dashboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.stat-present {
-  grid-area: present;
+.stats-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  flex: 1;
 }
 
-.stat-leave {
-  grid-area: leave;
-}
-
-.stat-percent {
-  grid-area: percent;
-}
-
-.stat-ot {
-  grid-area: ot;
-}
-
-.stat-extra {
-  grid-area: extra;
+.stat-extra-wide {
+  grid-column: 1 / -1;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+  border: 1px solid #fde68a;
+  
+  .stat-value {
+    font-size: 1.5rem;
+    color: #92400e;
+  }
+  
+  .stat-icon {
+    background: #fde68a;
+    color: #92400e;
+    width: 48px;
+    height: 48px;
+  }
 }
 
 @media (max-width: 1200px) {
-  .stats-grid {
+  .dashboard-main-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-mini-grid {
     grid-template-columns: repeat(2, 1fr);
-    grid-template-areas:
-      "bonus present"
-      "bonus leave"
-      "percent ot"
-      "extra extra";
   }
 }
 
 @media (max-width: 768px) {
-  .stats-grid {
-    display: flex;
-    flex-direction: column;
+  .dashboard-main-grid {
     gap: 1rem;
+  }
+  
+  .stats-mini-grid {
+    grid-template-columns: 1fr;
   }
 }
 

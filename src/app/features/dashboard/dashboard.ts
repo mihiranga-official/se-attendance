@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { SummaryService } from '../../core/services/summary.service';
@@ -7,11 +8,12 @@ import { BonusService } from '../../core/services/bonus.service';
 import { CelebrationService } from '../../core/services/celebration.service';
 import { AttendanceRecord, MonthlySummary } from '../../core/models/user.model';
 import { BonusCardComponent, BonusProgress } from '../../shared/components/bonus-card/bonus-card';
+import { AttendanceStatusCardComponent } from '../../shared/components/attendance-status-card/attendance-status-card';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, BonusCardComponent],
+  imports: [CommonModule, FormsModule, BonusCardComponent, AttendanceStatusCardComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
@@ -34,6 +36,9 @@ export class DashboardComponent implements OnInit {
   isCheckingIn = signal(false);
   isCheckingOut = signal(false);
   isLoadingBonus = signal(false);
+  isEditing = signal(false);
+  editCheckIn = '';
+  editCheckOut = '';
   actionMsg = signal('');
   actionError = signal('');
 
@@ -91,6 +96,7 @@ export class DashboardComponent implements OnInit {
       await this.attendanceSvc.checkIn(uid);
       const rec = await this.attendanceSvc.getAttendanceForDate(uid, this.todayStr);
       this.todayRecord.set(rec);
+      await this.refreshSummary();
       this.actionMsg.set(`✓ Checked in at ${rec?.checkIn}`);
     } catch (e: any) {
       this.actionError.set(e.message);
@@ -122,6 +128,48 @@ export class DashboardComponent implements OnInit {
       this.actionError.set(e.message);
     } finally {
       this.isCheckingOut.set(false);
+    }
+  }
+
+  toggleEdit() {
+    if (this.isEditing()) {
+      this.isEditing.set(false);
+    } else {
+      this.editCheckIn = this.todayRecord()?.checkIn || '';
+      this.editCheckOut = this.todayRecord()?.checkOut || '';
+      this.isEditing.set(true);
+    }
+  }
+
+  async saveEdit() {
+    const uid = this.auth.currentUser()?.uid;
+    if (!uid) return;
+
+    this.isEditing.set(false);
+    this.isLoadingBonus.set(true);
+    this.actionError.set('');
+    this.actionMsg.set('');
+
+    try {
+      const changes: any = {};
+      if (this.editCheckIn) changes.checkIn = this.editCheckIn;
+      if (this.editCheckOut) changes.checkOut = this.editCheckOut;
+      
+      await this.attendanceSvc.updateAttendance(uid, this.todayStr, changes);
+      
+      const [rec, bonus] = await Promise.all([
+        this.attendanceSvc.getAttendanceForDate(uid, this.todayStr),
+        this.bonusSvc.getBonusProgress(uid)
+      ]);
+      
+      this.todayRecord.set(rec);
+      this.bonusProgress.set(bonus);
+      await this.refreshSummary();
+      this.actionMsg.set('✓ Times updated successfully');
+    } catch (e: any) {
+      this.actionError.set(e.message);
+    } finally {
+      this.isLoadingBonus.set(false);
     }
   }
 
