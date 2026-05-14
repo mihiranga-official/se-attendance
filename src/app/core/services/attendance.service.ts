@@ -20,28 +20,31 @@ export class AttendanceService {
     return parseFloat((minutes / 60).toFixed(2));
   }
 
-  private calculateLateStatus(record: Partial<AttendanceRecord>): void {
-    if (!record.checkIn) return;
+  getDayType(dateStr: string): 'weekday' | 'saturday' | 'sunday' {
+    const day = new Date(dateStr).getDay();
+    if (day === 0) return 'sunday';
+    if (day === 6) return 'saturday';
+    return 'weekday';
+  }
+
+  calculateHoursAndStatus(record: Partial<AttendanceRecord>): void {
+    if (!record.checkIn) {
+      record.actualStatus = 'Incomplete';
+      return;
+    }
 
     const inMin = this.toMinutes(record.checkIn);
     const startMin = this.toMinutes(WORK_START);
+    const dayType = record.date ? this.getDayType(record.date) : 'weekday';
 
+    // 1. Calculate Late Status
     if (inMin > startMin) {
       record.isLate = true;
       record.lateMinutes = inMin - startMin;
-
-      const dayType = record.date ? this.getDayType(record.date) : 'weekday';
-
+      record.lostBonus = true;
+      record.lostFullDay = true;
       if (dayType === 'saturday') {
-        record.lostFullDay = true;
-        record.lostBonus = true;
         record.isSaturdayViolation = true;
-      } else if (dayType === 'weekday') {
-        record.lostBonus = true; // Lose bonus for being late
-        // Example: if excessive late (e.g. > 120 mins), maybe lostFullDay = true. 
-        // Based on rules: "Lose full-day eligibility, Lose daily bonus eligibility"
-        // Let's mark lostBonus = true, and lostFullDay if they are late.
-        record.lostFullDay = true;
       }
     } else {
       record.isLate = false;
@@ -50,47 +53,110 @@ export class AttendanceService {
       record.lostFullDay = false;
       record.isSaturdayViolation = false;
     }
-  }
 
-  getDayType(dateStr: string): 'weekday' | 'saturday' | 'sunday' {
-    const day = new Date(dateStr).getDay();
-    if (day === 0) return 'sunday';
-    if (day === 6) return 'saturday';
-    return 'weekday';
-  }
-
-  calculateHours(checkIn: string, checkOut: string, dateStr: string): { workedHours: number; otHours: number } {
-    const inMin = this.toMinutes(checkIn);
-    const outMin = this.toMinutes(checkOut);
-    const dayType = this.getDayType(dateStr);
-
-    if (outMin <= inMin) return { workedHours: 0, otHours: 0 };
-
-    const totalWorked = outMin - inMin;
-    let otMinutes = 0;
-
-    if (dayType === 'saturday') {
-      const endMin = this.toMinutes(SATURDAY_END);
-      otMinutes = Math.max(0, outMin - endMin);
+    // 2. 24H Shift Setup
+    if (record.shiftType === '24h') {
+      record.is24HourShift = true;
+      record.breakfastEligible = true;
+      record.nextDayLunchEligible = true;
     } else {
-      const endMin = this.toMinutes(WORK_END);
-      otMinutes = Math.max(0, outMin - endMin);
+      record.is24HourShift = false;
+      record.breakfastEligible = false;
+      record.nextDayLunchEligible = false;
     }
 
-    return {
-      workedHours: this.toHours(totalWorked),
-      otHours: this.toHours(otMinutes)
-    };
+    if (!record.checkOut) {
+      record.workedHours = 0;
+      record.otHours = 0;
+      record.actualStatus = record.isLate ? 'Late Arrival' : 'Incomplete';
+      return;
+    }
+
+    // 3. Calculate Worked Hours
+    const checkInDate = record.checkInDate || record.date || '';
+    const checkOutDate = record.checkOutDate || record.date || '';
+    
+    const startDt = new Date(`${checkInDate}T${record.checkIn}`);
+    const endDt = new Date(`${checkOutDate}T${record.checkOut}`);
+    
+    let totalWorked = Math.floor((endDt.getTime() - startDt.getTime()) / (1000 * 60));
+    let outMin = this.toMinutes(record.checkOut);
+    let otMinutes = 0;
+    
+    if (totalWorked < 0) totalWorked = 0;
+
+    if (record.is24HourShift) {
+      // Deduct 2 hours for lunch and dinner breaks
+      totalWorked = Math.max(0, totalWorked - 120);
+      otMinutes = Math.max(0, totalWorked - (9 * 60)); // Anything over 9h is OT? Standard is 9h.
+    } else {
+      if (dayType === 'saturday') {
+        const endMin = this.toMinutes(SATURDAY_END);
+        otMinutes = Math.max(0, outMin - endMin);
+      } else {
+        const endMin = this.toMinutes(WORK_END);
+        otMinutes = Math.max(0, outMin - endMin);
+      }
+    }
+
+    record.workedHours = this.toHours(totalWorked);
+    record.otHours = this.toHours(otMinutes);
+
+    // 4. Bonus & Status Validation
+    record.bonusDetails = [];
+    record.bonusDaysEarned = 0;
+
+    // Day 1 Logic
+    const day1IsLate = record.isLate || false;
+    let day1Eligible = !day1IsLate;
+    let day1Reason = day1IsLate ? 'Late Arrival' : 'Completed';
+
+    if (!record.is24HourShift) {
+      const isCompleted = dayType === 'saturday' ? outMin >= this.toMinutes(SATURDAY_END) : outMin >= this.toMinutes(WORK_END);
+      if (!isCompleted) {
+        day1Eligible = false;
+        day1Reason = 'Left Early';
+        
+        const reqMins = dayType === 'saturday' ? 5 * 60 : 9 * 60;
+        const workedRatio = totalWorked / reqMins;
+        if (workedRatio < 0.4) record.actualStatus = 'Incomplete';
+        else if (workedRatio < 0.8) record.actualStatus = 'Half Day';
+        else record.actualStatus = 'Early Leave';
+      } else {
+        record.actualStatus = day1IsLate ? 'Late Arrival' : 'Completed';
+      }
+    } else {
+      record.actualStatus = '24 Hour Shift';
+    }
+
+    record.bonusDetails.push({
+      date: checkInDate,
+      isEligible: day1Eligible,
+      reason: day1Reason
+    });
+    if (day1Eligible) record.bonusDaysEarned++;
+
+    // Day 2 Logic (Overnight)
+    if (record.is24HourShift && checkInDate !== checkOutDate) {
+      const outDateObj = new Date(checkOutDate);
+      const isSaturdayOut = outDateObj.getDay() === 6;
+      const threshold = isSaturdayOut ? SATURDAY_END : WORK_END;
+      const day2Eligible = outMin >= this.toMinutes(threshold);
+      
+      record.bonusDetails.push({
+        date: checkOutDate,
+        isEligible: day2Eligible,
+        reason: day2Eligible ? 'Completed' : `Left before ${threshold}`
+      });
+      if (day2Eligible) record.bonusDaysEarned++;
+    }
+
+    record.lostBonus = record.bonusDaysEarned === 0;
   }
 
   async saveAttendance(uid: string, record: AttendanceRecord): Promise<void> {
     const path = `attendance/${uid}/${record.date}`;
-    this.calculateLateStatus(record);
-    if (record.checkIn && record.checkOut) {
-      const calc = this.calculateHours(record.checkIn, record.checkOut, record.date);
-      record.workedHours = calc.workedHours;
-      record.otHours = calc.otHours;
-    }
+    this.calculateHoursAndStatus(record);
     await set(ref(database, path), record);
   }
 
@@ -100,12 +166,7 @@ export class AttendanceService {
     if (snap.exists()) {
       const existing = snap.val() as AttendanceRecord;
       const merged = { ...existing, ...changes };
-      this.calculateLateStatus(merged);
-      if (merged.checkIn && merged.checkOut) {
-        const calc = this.calculateHours(merged.checkIn, merged.checkOut, date);
-        merged.workedHours = calc.workedHours;
-        merged.otHours = calc.otHours;
-      }
+      this.calculateHoursAndStatus(merged);
       await update(ref(database, path), merged);
     }
   }
@@ -120,6 +181,14 @@ export class AttendanceService {
     if (!snap.exists()) return [];
     const all = snap.val() as Record<string, AttendanceRecord>;
     const prefix = `${year}-${String(month).padStart(2, '0')}`;
+    return Object.values(all).filter(r => r.date.startsWith(prefix));
+  }
+
+  async getAttendanceForYear(uid: string, year: number): Promise<AttendanceRecord[]> {
+    const snap = await get(ref(database, `attendance/${uid}`));
+    if (!snap.exists()) return [];
+    const all = snap.val() as Record<string, AttendanceRecord>;
+    const prefix = `${year}-`;
     return Object.values(all).filter(r => r.date.startsWith(prefix));
   }
 

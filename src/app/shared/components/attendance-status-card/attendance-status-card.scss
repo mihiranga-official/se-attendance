@@ -101,12 +101,13 @@
     margin-bottom: 1.5rem;
 
     .stat-box {
-      background: var(--bg-body, #f3f4f6);
+      background: var(--bg-main);
       padding: 1rem;
       border-radius: var(--radius-md, 8px);
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
+      border: 1px solid var(--border);
 
       .stat-label {
         font-size: 0.75rem;
@@ -171,10 +172,10 @@
 
       .value {
         font-weight: 600;
-        color: var(--text-muted, #6b7280);
-        background: var(--bg-body, #f3f4f6);
-        padding: 0.125rem 0.5rem;
-        border-radius: var(--radius-sm, 4px);
+        color: var(--text-main);
+        background: var(--bg-main);
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-md);
       }
 
       &.danger {

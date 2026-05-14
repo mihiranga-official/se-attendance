@@ -1,16 +1,23 @@
 <div class="summary-page">
   <div class="page-header">
     <div class="header-content">
-      <h1 class="page-title">Monthly Summary</h1>
+      <h1 class="page-title">{{ viewMode() === 'monthly' ? 'Monthly Summary' : 'Yearly Summary' }}</h1>
       <p class="page-subtitle">Review your performance and attendance statistics</p>
+      
+      <div class="view-toggles" style="margin-top: 1rem; display: flex; gap: 10px;">
+        <button class="btn-secondary" [class.active]="viewMode() === 'monthly'" (click)="setViewMode('monthly')">Monthly</button>
+        <button class="btn-secondary" [class.active]="viewMode() === 'yearly'" (click)="setViewMode('yearly')">Yearly</button>
+      </div>
     </div>
     <div class="header-actions">
       <div class="filter-group">
+        @if (viewMode() === 'monthly') {
         <select [(ngModel)]="currentMonth" (change)="loadSummary()" class="input-field select-sm">
           @for (m of months; track m.v) {
           <option [value]="m.v">{{ m.n }}</option>
           }
         </select>
+        }
         <select [(ngModel)]="currentYear" (change)="loadSummary()" class="input-field select-sm">
           @for (y of years; track y) {
           <option [value]="y">{{ y }}</option>
@@ -32,7 +39,7 @@
     <p>Generating summary report...</p>
   </div>
   } @else {
-  @if (summary()) {
+  @if (viewMode() === 'monthly' && summary()) {
   <div class="stats-grid">
     <div class="stat-card">
       <span class="stat-label">Total Working Days</span>
@@ -50,18 +57,39 @@
       <span class="stat-label">Leave Days</span>
       <span class="stat-value">{{ summary()?.leaveDays }}</span>
     </div>
-    <div class="stat-card info">
-      <span class="stat-label">Total OT Hours</span>
-      <span class="stat-value">{{ summary()?.totalOTHours }}h</span>
-    </div>
-    <div class="stat-card primary">
-      <span class="stat-label">Attendance Rate</span>
-      <span class="stat-value">{{ summary()?.attendancePercentage }}%</span>
+    <div class="stat-card warning">
+      <span class="stat-label">Half Days</span>
+      <span class="stat-value">{{ summary()?.halfDays }}</span>
     </div>
   </div>
   }
 
-  <div class="section-card">
+  @if (viewMode() === 'yearly' && yearlySummary()) {
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-label">Total Working Days</span>
+      <span class="stat-value">{{ yearlySummary()?.totalWorkingDays }}</span>
+    </div>
+    <div class="stat-card highlight">
+      <span class="stat-label">Present Days</span>
+      <span class="stat-value">{{ yearlySummary()?.presentDays }}</span>
+    </div>
+    <div class="stat-card danger">
+      <span class="stat-label">Absent Days</span>
+      <span class="stat-value">{{ yearlySummary()?.absentDays }}</span>
+    </div>
+    <div class="stat-card warning">
+      <span class="stat-label">Leave Days</span>
+      <span class="stat-value">{{ yearlySummary()?.leaveDays }}</span>
+    </div>
+    <div class="stat-card warning">
+      <span class="stat-label">Half Days</span>
+      <span class="stat-value">{{ yearlySummary()?.halfDays }}</span>
+    </div>
+  </div>
+  }
+
+  <div class="section-card" style="margin-top: 2.5rem;">
     <h2 class="section-title">Detailed Report</h2>
     @if (records().length === 0) {
     <div class="empty-state">

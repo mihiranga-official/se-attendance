@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { LeaveService } from '../../core/services/leave.service';
-import { AttendanceRecord, LeaveRecord } from '../../core/models/user.model';
+import { AttendanceRecord, LeaveRecord, ShiftType } from '../../core/models/user.model';
 
 interface CalendarDay {
   date: string;
@@ -14,6 +14,9 @@ interface CalendarDay {
   dayOfWeek: number;
   record?: AttendanceRecord;
   leave?: LeaveRecord;
+  isContinuation?: boolean;
+  isStart?: boolean;
+  isEnd?: boolean;
 }
 
 @Component({
@@ -36,16 +39,19 @@ export class AttendanceComponent implements OnInit {
   leaves = signal<LeaveRecord[]>([]);
 
   editCheckIn = '';
+  editCheckInDate = '';
   editCheckOut = '';
+  editCheckOutDate = '';
+  editShiftType: ShiftType = 'normal';
   editNotes = '';
   isSaving = signal(false);
   saveMsg = signal('');
   saveError = signal('');
   showModal = signal(false);
 
-  get monthName(): string {
-    return new Date(this.currentYear(), this.currentMonth() - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  }
+  currentMonthName = computed(() => {
+    return new Date(this.currentYear(), this.currentMonth() - 1).toLocaleString('default', { month: 'long' });
+  });
 
   weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -75,6 +81,31 @@ export class AttendanceComponent implements OnInit {
 
     const recMap = new Map(recs.map(r => [r.date, r]));
     const leaveMap = new Map(leaves.map(l => [l.date, l]));
+
+    // Track days covered by multi-day shifts
+    const startMap = new Map<string, AttendanceRecord>();
+    const endMap = new Map<string, AttendanceRecord>();
+    const spanMap = new Map<string, AttendanceRecord>();
+    
+    recs.forEach(r => {
+      if (r.checkOutDate && r.checkOutDate > r.date) {
+        startMap.set(r.date, r);
+        endMap.set(r.checkOutDate, r);
+        
+        let curr = new Date(r.date + 'T00:00:00');
+        let end = new Date(r.checkOutDate + 'T00:00:00');
+        curr.setDate(curr.getDate() + 1);
+        while (curr < end) { // Only intermediate days
+          const ds = `${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}-${String(curr.getDate()).padStart(2, '0')}`;
+          spanMap.set(ds, r);
+          curr.setDate(curr.getDate() + 1);
+        }
+      } else {
+        // Normal shift - both start and end on same day
+        // But for visual clarity, we treat it as a standard record in recMap
+      }
+    });
+
     const days: CalendarDay[] = [];
 
     // Padding for first week
@@ -83,10 +114,15 @@ export class AttendanceComponent implements OnInit {
       const d = prevMonth - i;
       const pm = m === 1 ? 12 : m - 1;
       const py = m === 1 ? y - 1 : y;
+      const dateStr = `${py}-${String(pm).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       days.push({
-        date: `${py}-${String(pm).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+        date: dateStr,
         day: d, isToday: false, isCurrentMonth: false,
-        dayOfWeek: new Date(py, pm - 1, d).getDay()
+        dayOfWeek: new Date(py, pm - 1, d).getDay(),
+        record: recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr),
+        isStart: startMap.has(dateStr),
+        isEnd: endMap.has(dateStr),
+        isContinuation: spanMap.has(dateStr)
       });
     }
 
@@ -98,7 +134,10 @@ export class AttendanceComponent implements OnInit {
         isToday: dateStr === todayStr,
         isCurrentMonth: true,
         dayOfWeek: new Date(y, m - 1, d).getDay(),
-        record: recMap.get(dateStr),
+        record: recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr),
+        isStart: startMap.has(dateStr),
+        isEnd: endMap.has(dateStr),
+        isContinuation: spanMap.has(dateStr),
         leave: leaveMap.get(dateStr)
       });
     }
@@ -108,10 +147,15 @@ export class AttendanceComponent implements OnInit {
     for (let d = 1; d <= remaining; d++) {
       const nm = m === 12 ? 1 : m + 1;
       const ny = m === 12 ? y + 1 : y;
+      const dateStr = `${ny}-${String(nm).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       days.push({
-        date: `${ny}-${String(nm).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+        date: dateStr,
         day: d, isToday: false, isCurrentMonth: false,
-        dayOfWeek: new Date(ny, nm - 1, d).getDay()
+        dayOfWeek: new Date(ny, nm - 1, d).getDay(),
+        record: recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr),
+        isStart: startMap.has(dateStr),
+        isEnd: endMap.has(dateStr),
+        isContinuation: spanMap.has(dateStr)
       });
     }
 
@@ -142,9 +186,12 @@ export class AttendanceComponent implements OnInit {
     if (!day.isCurrentMonth) return;
     this.selectedDay.set(day);
 
-    // Set default times if no record exists, otherwise use existing record
+    // Set default values
     this.editCheckIn = day.record?.checkIn ?? '08:00';
+    this.editCheckInDate = day.record?.checkInDate ?? day.date;
     this.editCheckOut = day.record?.checkOut ?? '17:00';
+    this.editCheckOutDate = day.record?.checkOutDate ?? day.date;
+    this.editShiftType = (day.record?.shiftType as ShiftType) ?? 'normal';
     this.editNotes = day.record?.notes ?? '';
     this.saveMsg.set('');
     this.saveError.set('');
@@ -165,22 +212,38 @@ export class AttendanceComponent implements OnInit {
       this.saveError.set('Check-in time is required.');
       return;
     }
-    if (this.editCheckOut && this.attendanceSvc['toMinutes'](this.editCheckOut) <= this.attendanceSvc['toMinutes'](this.editCheckIn)) {
-      this.saveError.set('Check-out must be after check-in.');
-      return;
+    if (this.editCheckOut && this.editCheckIn) {
+      const checkInDate = this.editShiftType === '24h' ? (this.editCheckInDate || day.date) : day.date;
+      const checkOutDate = this.editShiftType === '24h' ? (this.editCheckOutDate || day.date) : day.date;
+      
+      const startDateTime = new Date(`${checkInDate}T${this.editCheckIn}`);
+      const endDateTime = new Date(`${checkOutDate}T${this.editCheckOut}`);
+      
+      if (endDateTime <= startDateTime) {
+        this.saveError.set('Check-out must be after Check-in.');
+        return;
+      }
     }
 
     this.isSaving.set(true);
     this.saveError.set('');
     try {
-      const record: any = {
+      // Use selected checkout date for 24h shifts, or default to current date
+      let checkOutDate = this.editCheckOutDate || day.date;
+
+      if (this.editShiftType === 'normal') {
+        checkOutDate = day.date; // Normal shifts are same day
+      }
+
+      const record: AttendanceRecord = {
         date: day.date,
-        checkIn: this.editCheckIn || null,
-        checkOut: this.editCheckOut || null,
+        checkInDate: this.editShiftType === '24h' ? (this.editCheckInDate || day.date) : day.date,
+        checkIn: this.editCheckIn || '',
+        checkOutDate: this.editShiftType === '24h' ? (this.editCheckOutDate || day.date) : day.date,
+        checkOut: this.editCheckOut || '',
+        shiftType: this.editShiftType || 'normal',
         status: this.editCheckIn ? 'present' : 'absent',
-        notes: this.editNotes || null,
-        workedHours: 0,
-        otHours: 0
+        notes: this.editNotes || '',
       };
       await this.attendanceSvc.saveAttendance(uid, record);
       this.saveMsg.set('Entry saved successfully.');
@@ -212,6 +275,17 @@ export class AttendanceComponent implements OnInit {
       this.saveError.set(e.message);
     } finally {
       this.isSaving.set(false);
+    }
+  }
+
+  onShiftTypeChange() {
+    if (this.editShiftType === '24h' && this.selectedDay()) {
+      if (!this.editCheckInDate) this.editCheckInDate = this.selectedDay()!.date;
+      if (!this.editCheckOutDate) {
+        const nextDay = new Date(this.selectedDay()!.date + 'T00:00:00');
+        nextDay.setDate(nextDay.getDate() + 1);
+        this.editCheckOutDate = nextDay.toISOString().split('T')[0];
+      }
     }
   }
 

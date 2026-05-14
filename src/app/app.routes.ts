@@ -42,6 +42,10 @@ export const routes: Routes = [
         path: 'admin',
         loadComponent: () => import('./features/admin/admin').then(m => m.AdminComponent),
         canActivate: [adminGuard]
+      },
+      {
+        path: 'performance-metrics',
+        loadComponent: () => import('./features/performance-metrics/performance-metrics').then(m => m.PerformanceMetricsComponent)
       }
     ]
   },

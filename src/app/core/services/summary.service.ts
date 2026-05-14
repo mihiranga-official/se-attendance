@@ -28,6 +28,19 @@ export class SummaryService {
     let totalLateMinutes = 0;
     let saturdayViolations = 0;
     let bonusLostDays = 0;
+    let earlyLeaveDays = 0;
+    let incompleteDays = 0;
+    let bonusEligibleDays = 0;
+    let twentyFourHourShifts = 0;
+    let totalOvernightHours = 0;
+    let freeMealEligibleDays = 0;
+
+    const coveredDays = new Set<string>();
+    records.forEach(r => {
+      if (r.is24HourShift && r.checkInDate && r.checkOutDate && r.checkInDate !== r.checkOutDate) {
+        coveredDays.add(r.checkOutDate);
+      }
+    });
 
     for (const day of workingDays) {
       const rec = recordMap.get(day);
@@ -39,10 +52,16 @@ export class SummaryService {
         continue;
       }
 
+      if (coveredDays.has(day)) {
+        // This day is handled by the previous day's 24h shift record
+        continue;
+      }
+
       if (!rec || rec.status === 'absent') {
         absentDays++;
       } else if (rec.status === 'present' || rec.checkIn) {
-        presentDays++;
+        const is24hMulti = rec.is24HourShift && rec.checkInDate !== rec.checkOutDate;
+        presentDays += is24hMulti ? 2 : 1;
         totalOTHours += rec.otHours ?? 0;
         
         if (rec.isLate) {
@@ -52,8 +71,24 @@ export class SummaryService {
         if (rec.isSaturdayViolation) {
           saturdayViolations++;
         }
-        if (rec.lostBonus) {
-          bonusLostDays++;
+        
+        // Bonus calculation
+        const bonuses = rec.bonusDaysEarned ?? (rec.lostBonus ? 0 : 1);
+        const targetDays = is24hMulti ? 2 : 1;
+        
+        bonusEligibleDays += bonuses;
+        bonusLostDays += (targetDays - bonuses);
+        
+        if (rec.actualStatus === 'Early Leave') earlyLeaveDays++;
+        if (rec.actualStatus === 'Incomplete') incompleteDays++;
+        if (rec.actualStatus === 'Half Day') halfDays++;
+        
+        if (rec.is24HourShift) {
+          twentyFourHourShifts++;
+          totalOvernightHours += rec.workedHours ?? 0;
+        }
+        if (rec.breakfastEligible || rec.nextDayLunchEligible) {
+          freeMealEligibleDays++;
         }
       }
     }
@@ -81,8 +116,46 @@ export class SummaryService {
       lateDays,
       totalLateMinutes,
       saturdayViolations,
-      bonusLostDays
+      bonusLostDays,
+      earlyLeaveDays,
+      incompleteDays,
+      bonusEligibleDays,
+      twentyFourHourShifts,
+      totalOvernightHours: parseFloat(totalOvernightHours.toFixed(2)),
+      freeMealEligibleDays
     };
+  }
+
+  async getYearlySummary(uid: string, year: number): Promise<MonthlySummary> {
+    const allMonths = await this.getPerformanceTrend(uid, year);
+
+    return allMonths.reduce((acc, curr) => {
+      return {
+        ...acc,
+        totalWorkingDays: acc.totalWorkingDays + curr.totalWorkingDays,
+        presentDays: acc.presentDays + curr.presentDays,
+        absentDays: acc.absentDays + curr.absentDays,
+        leaveDays: acc.leaveDays + curr.leaveDays,
+        halfDays: acc.halfDays + curr.halfDays,
+        totalOTHours: acc.totalOTHours + curr.totalOTHours,
+        extraDays: acc.extraDays + curr.extraDays,
+        lateDays: acc.lateDays + curr.lateDays,
+        totalLateMinutes: acc.totalLateMinutes + curr.totalLateMinutes,
+        saturdayViolations: acc.saturdayViolations + curr.saturdayViolations,
+        bonusLostDays: acc.bonusLostDays + curr.bonusLostDays,
+        earlyLeaveDays: (acc.earlyLeaveDays || 0) + (curr.earlyLeaveDays || 0),
+        incompleteDays: (acc.incompleteDays || 0) + (curr.incompleteDays || 0),
+        bonusEligibleDays: (acc.bonusEligibleDays || 0) + (curr.bonusEligibleDays || 0),
+        twentyFourHourShifts: (acc.twentyFourHourShifts || 0) + (curr.twentyFourHourShifts || 0),
+        totalOvernightHours: (acc.totalOvernightHours || 0) + (curr.totalOvernightHours || 0),
+        freeMealEligibleDays: (acc.freeMealEligibleDays || 0) + (curr.freeMealEligibleDays || 0)
+      };
+    });
+  }
+
+  async getPerformanceTrend(uid: string, year: number): Promise<MonthlySummary[]> {
+    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+    return Promise.all(months.map(m => this.getMonthlySummary(uid, year, m)));
   }
 
   exportToCSV(records: AttendanceRecord[], filename: string): void {

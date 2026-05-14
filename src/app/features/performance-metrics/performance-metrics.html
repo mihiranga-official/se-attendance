@@ -1,0 +1,205 @@
+<div class="metrics-page">
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">Performance Analytics</h1>
+      <p class="page-subtitle">Detailed employee performance tracking and analytics</p>
+    </div>
+    <div class="header-actions">
+      <div class="filter-group">
+        @if (isAdmin()) {
+          <select [(ngModel)]="selectedDepartment" (change)="onDepartmentChange()" class="input-field select-sm">
+            @for (d of departments(); track d) {
+              <option [value]="d">{{ d }}</option>
+            }
+          </select>
+          <select [(ngModel)]="selectedUser" (change)="onUserChange()" class="input-field select-sm">
+            @for (u of filteredUsers; track u.uid) {
+              <option [value]="u.uid">{{ u.name }}</option>
+            }
+          </select>
+        }
+        <select [(ngModel)]="currentMonth" (change)="loadMetrics()" class="input-field select-sm">
+          @for (m of months; track m.v) {
+          <option [value]="m.v">{{ m.n }}</option>
+          }
+        </select>
+        <select [(ngModel)]="currentYear" (change)="loadMetrics()" class="input-field select-sm">
+          @for (y of years; track y) {
+          <option [value]="y">{{ y }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="section-card error-state">
+      <div class="error-icon">⚠️</div>
+      <div class="error-content">
+        <h3>Oops! Something went wrong</h3>
+        <p>{{ error() }}</p>
+        <button class="btn-primary" (click)="loadMetrics()">Try Again</button>
+      </div>
+    </div>
+  }
+
+  @if (summary()) {
+  <div class="section-card score-overview">
+    <div class="score-circle-lg">
+      <svg viewBox="0 0 36 36" class="circular-chart primary">
+        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+        <path class="circle" [attr.stroke-dasharray]="(summary()?.attendancePercentage || 0) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+        <text x="18" y="20.35" class="percentage">{{ summary()?.attendancePercentage || 0 }}%</text>
+      </svg>
+    </div>
+    <div class="score-details">
+      <h2>Attendance Score</h2>
+      <p>Performance based on working days vs. present days in the selected period.</p>
+      <div class="score-meta">
+        <span class="meta-item"><strong>{{ summary()?.presentDays || 0 }}</strong> Present</span>
+        <span class="meta-divider"></span>
+        <span class="meta-item"><strong>{{ summary()?.totalWorkingDays || 0 }}</strong> Working Days</span>
+      </div>
+    </div>
+  </div>
+  }
+
+  @if (isLoading()) {
+  <div class="metrics-grid">
+    @for (i of [1,2,3,4,5,6,7,8,9]; track i) {
+      <div class="metric-card skeleton">
+        <div class="metric-icon skeleton-box"></div>
+        <div class="metric-info">
+          <div class="skeleton-text short"></div>
+          <div class="skeleton-text"></div>
+        </div>
+      </div>
+    }
+  </div>
+  } @else if (summary()) {
+  <div class="metrics-grid">
+    <!-- 1. Late Days -->
+    <div class="metric-card danger">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ summary()?.lateDays || 0 }}</span>
+        <span class="metric-label">Late Arrival Days</span>
+      </div>
+    </div>
+
+    <!-- 2. Early Leaves -->
+    <div class="metric-card warning">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ summary()?.earlyLeaveDays || 0 }}</span>
+        <span class="metric-label">Early Leave Days</span>
+      </div>
+    </div>
+
+    <!-- 3. Half Days -->
+    <div class="metric-card warning">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14v12c3.31 0 6-2.69 6-6s-2.69-6-6-6z"/></svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ summary()?.halfDays || 0 }}</span>
+        <span class="metric-label">Half Days</span>
+      </div>
+    </div>
+
+    <!-- 4. Incomplete Days -->
+    <div class="metric-card danger">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ summary()?.incompleteDays || 0 }}</span>
+        <span class="metric-label">Incomplete Days</span>
+      </div>
+    </div>
+
+    <!-- 5. Overtime Hours -->
+    <div class="metric-card success">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ summary()?.totalOTHours || 0 }}h</span>
+        <span class="metric-label">Overtime Hours</span>
+      </div>
+    </div>
+
+    <!-- 6. 24H Shift Count -->
+    <div class="metric-card info">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c5.52 0 10-4.48 10-10S17.52 2 12 2 2 6.48 2 12s4.48 10 10 10zm1-15h-2v6h5v-2h-3V7z"/></svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ summary()?.twentyFourHourShifts || 0 }}</span>
+        <span class="metric-label">24H Shift Count</span>
+      </div>
+    </div>
+
+    <!-- 7. Bonus Eligible -->
+    <div class="metric-card success">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ summary()?.bonusEligibleDays || 0 }}</span>
+        <span class="metric-label">Bonus Eligible Days</span>
+      </div>
+    </div>
+
+    <!-- 8. Bonus Lost -->
+    <div class="metric-card danger">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z"/></svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ summary()?.bonusLostDays || 0 }}</span>
+        <span class="metric-label">Bonus Lost Days</span>
+      </div>
+    </div>
+
+    <!-- 9. Free Meals -->
+    <div class="metric-card info">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ summary()?.freeMealEligibleDays || 0 }}</span>
+        <span class="metric-label">Free Meal Eligible Days</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-card trend-section">
+    <h2 class="section-title">Attendance Rate Trend</h2>
+    <div class="trend-container">
+      <div class="trend-bar-grid">
+        @for (item of trendData(); track item.month) {
+          <div class="trend-bar-item">
+            <div class="trend-bar-wrapper">
+               <div class="trend-bar" [style.height]="item.rate + '%'" [class.active]="item.isActive" [title]="item.month + ': ' + item.rate + '%'">
+                 <span class="trend-value">{{ item.rate }}%</span>
+               </div>
+            </div>
+            <span class="trend-label">{{ item.month }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+  } @else if (!isLoading() && !error()) {
+    <div class="section-card empty-state">
+      <div class="empty-icon">📂</div>
+      <h3>No Data Available</h3>
+      <p>We couldn't find any performance data for the selected period.</p>
+    </div>
+  }
+</div>

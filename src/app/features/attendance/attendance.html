@@ -2,18 +2,21 @@
   <div class="page-header">
     <div class="header-content">
       <h1 class="page-title">Attendance Calendar</h1>
-      <p class="page-subtitle">Track and manage your daily attendance records</p>
+      <p class="page-subtitle">Track and manage your daily check-in/out records</p>
     </div>
+
     <div class="calendar-nav">
       <button class="btn-icon" (click)="prevMonth()" title="Previous Month">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
       </button>
-      <h2 class="current-month">{{ monthName }}</h2>
+      <h2 class="current-month">{{ currentMonthName() }} {{ currentYear() }}</h2>
       <button class="btn-icon" (click)="nextMonth()" title="Next Month">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
         </svg>
       </button>
     </div>
@@ -21,42 +24,49 @@
 
   <div class="calendar-card">
     <div class="calendar-grid">
-      <!-- Weekday headers -->
       @for (day of weekDays; track day) {
       <div class="weekday-header">{{ day }}</div>
       }
 
-      <!-- Calendar days -->
       @for (day of calendarDays(); track day.date) {
-      <div class="calendar-day" [class]="getDayClass(day)" (click)="selectDay(day)">
-        <span class="day-number">{{ day.day }}</span>
+      <div class="calendar-day" [class.outside]="!day.isCurrentMonth" [class.today]="day.isToday"
+        [class.sunday]="day.dayOfWeek === 0" [class.saturday]="day.dayOfWeek === 6" (click)="selectDay(day)">
+        <div class="day-number">{{ day.day }}</div>
 
-        @if (day.isCurrentMonth) {
-        <div class="day-content">
-          @if (day.leave) {
-          <div class="leave-badge">
-            <span class="badge badge-warning">ON LEAVE</span>
-            <span class="leave-type">{{ day.leave.type === 'full' ? 'Full' : 'Half' }}</span>
-          </div>
-          } @else if (day.record) {
-          <div class="attendance-info">
-            @if (day.record.checkIn) {
-            <div class="time-mark in">
-              <span class="dot"></span>
-              <span>{{ day.record.checkIn }}</span>
-            </div>
+        @if (day.record) {
+        <div class="day-stats" [class.is-24h]="day.record.is24HourShift">
+          @if (day.record.status === 'present') {
+            @if (day.record.is24HourShift) {
+              @if (day.isStart) {
+                <div class="status-marker start">
+                  <span class="marker-dot success"></span>
+                  <span class="marker-time">START {{ day.record.checkIn }}</span>
+                </div>
+              } @else if (day.isEnd) {
+                <div class="status-marker end">
+                  <span class="marker-dot danger"></span>
+                  <span class="marker-time">END {{ day.record.checkOut }}</span>
+                </div>
+              } @else if (day.isContinuation) {
+                <div class="status-marker mid">
+                  <span class="marker-dot info"></span>
+                  <span class="marker-time">SHIFTING...</span>
+                </div>
+              }
+            } @else {
+              <div class="time-block in">
+                <span class="label">IN</span>
+                <span class="time">{{ day.record.checkIn }}</span>
+              </div>
+              <div class="time-block out">
+                <span class="label">OUT</span>
+                <span class="time">{{ day.record.checkOut ?? '--:--' }}</span>
+              </div>
             }
-            @if (day.record.checkOut) {
-            <div class="time-mark out">
-              <span class="dot"></span>
-              <span>{{ day.record.checkOut }}</span>
-            </div>
-            }
-          </div>
-          } @else if (day.dayOfWeek === 0) {
-          <span class="day-label holiday">Sunday</span>
-          } @else if (day.dayOfWeek === 6) {
-          <span class="day-label saturday">Sat</span>
+          } @else if (day.record.status === 'holiday') {
+            <div class="status-badge holiday">HOLIDAY</div>
+          } @else if (day.record.status === 'leave') {
+            <div class="status-badge leave">LEAVE</div>
           }
         </div>
         }
@@ -65,93 +75,152 @@
     </div>
 
     <div class="calendar-legend">
-      <div class="legend-item"><span class="dot dot-completed"></span> Completed</div>
-      <div class="legend-item"><span class="dot dot-missing"></span> In Progress</div>
-      <div class="legend-item"><span class="dot dot-leave"></span> Leave</div>
-      <div class="legend-item"><span class="dot dot-holiday"></span> Weekend</div>
+      <div class="legend-item">
+        <span class="dot dot-completed"></span>
+        <span>Present</span>
+      </div>
+      <div class="legend-item">
+        <span class="dot dot-missing"></span>
+        <span>Missing Checkout</span>
+      </div>
+      <div class="legend-item">
+        <span class="dot dot-leave"></span>
+        <span>Leave</span>
+      </div>
+      <div class="legend-item">
+        <span class="dot dot-holiday"></span>
+        <span>Holiday</span>
+      </div>
     </div>
   </div>
 
-  <!-- Edit Modal -->
   @if (showModal()) {
-  <div class="modal-backdrop" (click)="closeModal()">
+  <div class="modal-backdrop" (click)="showModal.set(false)">
     <div class="modal-card" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <div>
           <h3>Edit Attendance</h3>
-          <p>{{ formatSelectedDate() }}</p>
+          <p>{{ selectedDay()?.date | date:'fullDate' }}</p>
         </div>
-        <button class="close-btn" (click)="closeModal()">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-            <path
-              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+        <button class="close-btn" (click)="showModal.set(false)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         </button>
       </div>
 
       <div class="modal-body">
-        @if (saveMsg()) {
-        <div class="alert alert-success">{{ saveMsg() }}</div>
-        }
-        @if (saveError()) {
-        <div class="alert alert-error">{{ saveError() }}</div>
-        }
+        <div class="shift-form-container" [class.two-col]="editShiftType === '24h'">
+          <!-- Column 1: Primary Inputs -->
+          <div class="form-column">
+            <div class="form-group">
+              <label>Shift Type</label>
+              <select [(ngModel)]="editShiftType" (change)="onShiftTypeChange()" class="input-field">
+                <option value="normal">Normal Shift (8:00 AM - 5:00 PM)</option>
+                <option value="24h">24 Hours Shift</option>
+              </select>
+            </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Check In Time</label>
-            <input type="time" [(ngModel)]="editCheckIn" class="input-field">
+            @if (editShiftType === 'normal') {
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Check In Time</label>
+                  <input type="time" [(ngModel)]="editCheckIn" class="input-field">
+                </div>
+                <div class="form-group">
+                  <label>Check Out Time</label>
+                  <input type="time" [(ngModel)]="editCheckOut" class="input-field">
+                </div>
+              </div>
+            } @else {
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Check-in Date</label>
+                  <input type="date" [(ngModel)]="editCheckInDate" class="input-field">
+                </div>
+                <div class="form-group">
+                  <label>Check-in Time</label>
+                  <input type="time" [(ngModel)]="editCheckIn" class="input-field">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Checkout Date</label>
+                  <input type="date" [(ngModel)]="editCheckOutDate" class="input-field">
+                </div>
+                <div class="form-group">
+                  <label>Checkout Time</label>
+                  <input type="time" [(ngModel)]="editCheckOut" class="input-field">
+                </div>
+              </div>
+
+              <div class="benefit-banner compact">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                  <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+                </svg>
+                <span>2H Break & Free Meals Included</span>
+              </div>
+            }
+
+            <div class="form-group">
+              <label>Notes <span class="optional-label">(Optional)</span></label>
+              <textarea [(ngModel)]="editNotes" placeholder="Additional notes..." class="input-field textarea-sm"></textarea>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Check Out Time</label>
-            <input type="time" [(ngModel)]="editCheckOut" class="input-field">
-          </div>
-        </div>
 
-        <div class="form-group">
-          <label>Notes <span class="optional-label">(Optional)</span></label>
-          <textarea [(ngModel)]="editNotes" placeholder="Any additional notes..."
-            class="input-field textarea"></textarea>
-        </div>
+          <!-- Column 2: Breakdown & Quick Actions -->
+          <div class="form-column">
+            @if (selectedDay()?.record?.bonusDetails?.length) {
+              <div class="bonus-breakdown-section compact">
+                <label class="section-label">Bonus Eligibility</label>
+                <div class="bonus-details-grid">
+                  @for (detail of selectedDay()?.record?.bonusDetails; track detail.date) {
+                    <div class="bonus-detail-item mini" [class.eligible]="detail.isEligible" [class.failed]="!detail.isEligible">
+                      <div class="detail-header">
+                        <span class="detail-date">{{ detail.date | date:'MMM d' }}</span>
+                        <span class="detail-status-badge">{{ detail.isEligible ? 'OK' : 'FAIL' }}</span>
+                      </div>
+                      <div class="detail-reason" style="font-size: 0.7rem;">{{ detail.reason }}</div>
+                    </div>
+                  }
+                </div>
+                <div class="bonus-total-summary mini">
+                  Total Bonus Days: <strong>{{ selectedDay()?.record?.bonusDaysEarned || 0 }}</strong>
+                </div>
+              </div>
+            }
 
-        <div class="quick-status-section">
-          <label>Quick Status Update</label>
-          <div class="quick-status-grid">
-            <button type="button" class="btn-quick btn-holiday" (click)="markAsHoliday()" [disabled]="isSaving()">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
-              </svg>
-              <span>Holiday</span>
-            </button>
-            <button type="button" class="btn-quick btn-weekend" (click)="markAsSunday()" [disabled]="isSaving()">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                <path
-                  d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />
-              </svg>
-              <span>Sunday</span>
-            </button>
-            <button type="button" class="btn-quick btn-leave" (click)="markAsLeave()" [disabled]="isSaving()">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                <path
-                  d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" />
-              </svg>
-              <span>Leave</span>
-            </button>
+            <div class="quick-status-section compact">
+              <label class="section-label">Quick Status</label>
+              <div class="quick-status-grid">
+                <button type="button" class="btn-quick sm btn-holiday" (click)="markAsHoliday()" [disabled]="isSaving()">
+                  <span>Holiday</span>
+                </button>
+                <button type="button" class="btn-quick sm btn-weekend" (click)="markAsSunday()" [disabled]="isSaving()">
+                  <span>Sunday</span>
+                </button>
+                <button type="button" class="btn-quick sm btn-leave" (click)="markAsLeave()" [disabled]="isSaving()">
+                  <span>Leave</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div class="modal-footer">
         <button class="btn-danger" (click)="removeAttendance()" [disabled]="isSaving()"
-          title="Remove this attendance record">
-          @if (isSaving()) { <span class="spinner-sm"></span> }
+          title="Remove record">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
             <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-9l-1 1H5v2h14V4z" />
           </svg>
           <span>Remove</span>
         </button>
         <div class="spacer"></div>
-        <button class="btn-secondary" (click)="closeModal()">Cancel</button>
+        <button class="btn-secondary" (click)="showModal.set(false)" [disabled]="isSaving()">Cancel</button>
         <button class="btn-primary" (click)="saveEntry()" [disabled]="isSaving()">
           @if (isSaving()) { <span class="spinner-sm"></span> }
           <span>Save Entry</span>

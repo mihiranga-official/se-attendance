@@ -22,8 +22,10 @@ export class SummaryComponent implements OnInit {
   currentMonth = new Date().getMonth() + 1;
   
   summary = signal<MonthlySummary | null>(null);
+  yearlySummary = signal<MonthlySummary | null>(null);
   records = signal<AttendanceRecord[]>([]);
   isLoading = signal(false);
+  viewMode = signal<'monthly' | 'yearly'>('monthly');
 
   years = [2024, 2025, 2026];
   months = [
@@ -43,12 +45,18 @@ export class SummaryComponent implements OnInit {
     
     this.isLoading.set(true);
     try {
-      const [sum, recs] = await Promise.all([
-        this.summarySvc.getMonthlySummary(uid, this.currentYear, this.currentMonth),
-        this.attendSvc.getAttendanceForMonth(uid, this.currentYear, this.currentMonth)
-      ]);
-      this.summary.set(sum);
-      this.records.set(recs.sort((a, b) => a.date.localeCompare(b.date)));
+      if (this.viewMode() === 'monthly') {
+        const [sum, recs] = await Promise.all([
+          this.summarySvc.getMonthlySummary(uid, this.currentYear, this.currentMonth),
+          this.attendSvc.getAttendanceForMonth(uid, this.currentYear, this.currentMonth)
+        ]);
+        this.summary.set(sum);
+        this.records.set(recs.sort((a, b) => a.date.localeCompare(b.date)));
+      } else {
+        const yearSum = await this.summarySvc.getYearlySummary(uid, this.currentYear);
+        this.yearlySummary.set(yearSum);
+        this.records.set([]); // Optional: fetch all records for the year, but might be too large. Let's leave empty or fetch them. For now empty to just show cards.
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -56,9 +64,31 @@ export class SummaryComponent implements OnInit {
     }
   }
 
-  exportCSV() {
-    const filename = `attendance_summary_${this.currentYear}_${this.currentMonth}.csv`;
-    this.summarySvc.exportToCSV(this.records(), filename);
+  setViewMode(mode: 'monthly' | 'yearly') {
+    this.viewMode.set(mode);
+    this.loadSummary();
+  }
+
+  async exportCSV() {
+    const uid = this.auth.currentUser()?.uid;
+    if (!uid) return;
+
+    this.isLoading.set(true);
+    try {
+      let recordsToExport = this.records();
+      let filename = `attendance_summary_${this.currentYear}_${this.currentMonth}.csv`;
+
+      if (this.viewMode() === 'yearly') {
+        recordsToExport = await this.attendSvc.getAttendanceForYear(uid, this.currentYear);
+        filename = `attendance_summary_full_year_${this.currentYear}.csv`;
+      }
+
+      this.summarySvc.exportToCSV(recordsToExport.sort((a, b) => a.date.localeCompare(b.date)), filename);
+    } catch (e) {
+      console.error('Export failed', e);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   getStatusClass(status: string): string {

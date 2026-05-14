@@ -22,6 +22,24 @@ export class AttendanceStatusCardComponent {
     return this.todayRecord?.isLate || false;
   }
 
+  get shiftType() {
+    const type = this.todayRecord?.shiftType;
+    if (type === '24h') return '24 Hour Shift';
+    return 'Normal';
+  }
+
+  get is24HourShift() {
+    return this.todayRecord?.is24HourShift || false;
+  }
+
+  get breakfastEligible() {
+    return this.todayRecord?.breakfastEligible || false;
+  }
+
+  get nextDayLunchEligible() {
+    return this.todayRecord?.nextDayLunchEligible || false;
+  }
+
   get isSaturdayViolation() {
     return this.todayRecord?.isSaturdayViolation || false;
   }
