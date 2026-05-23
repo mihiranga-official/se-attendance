@@ -6,6 +6,12 @@
     </div>
     <div class="header-actions">
       <div class="filter-group">
+        <button (click)="downloadCSV()" class="btn-primary btn-sm btn-csv-download" style="height: 38px; padding: 0 1rem; border-radius: 8px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; border: none; font-weight: 600; cursor: pointer; color: white;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
+          </svg>
+          <span>Download CSV</span>
+        </button>
         @if (isAdmin()) {
           <select [(ngModel)]="selectedDepartment" (change)="onDepartmentChange()" class="input-field select-sm">
             @for (d of departments(); track d) {
@@ -364,6 +370,37 @@
                   </div>
                   <span class="popup-reason">{{ item.reason }}</span>
                   <div class="popup-cover">{{ item.info }}</div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- 11. Food Requests & Cost -->
+    <div class="metric-card info">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+        </svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ foodRequestsCount() }} Orders</span>
+        <span class="metric-label">Food Cost: Rs. {{ foodRequestsTotalCost() }}</span>
+      </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Food Requests Detail</h4>
+        <div class="popup-scroll">
+          @if (foodRequestsList().length === 0) {
+            <p class="no-records">No food requests logged this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of foodRequestsList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
                 </li>
               }
             </ul>

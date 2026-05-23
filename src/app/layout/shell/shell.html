@@ -10,8 +10,8 @@
           <img src="logo.png" alt="Attendance Logo" />
         </div>
         <div class="logo-text-group">
-
-          <span class="logo-subtitle">Attendance</span>
+          <!-- <span class="logo-title">SE TEAM ATTENDANCE</span> -->
+          <span class="logo-subtitle-sm">Software Division Attendance</span>
         </div>
       </div>
     </div>
@@ -54,6 +54,13 @@
           </svg>
           <span>Performance Analytics</span>
         </a>
+        <a routerLink="/food-request" routerLinkActive="active" (click)="closeSidebar()" class="nav-item" id="nav-food-request">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+          </svg>
+          <span>Food Request</span>
+        </a>
+
       </div>
 
       @if (auth.isAdmin()) {
@@ -69,6 +76,53 @@
       </div>
       }
     </nav>
+
+    <!-- Sidebar Decorative Brand Card -->
+    <div class="sidebar-brand-promo">
+      <div class="brand-promo-card">
+        <div class="promo-logo-outer">
+          <div class="promo-logo-inner">
+            <img src="logo.png" alt="Software Division Logo" />
+          </div>
+        </div>
+        <div class="promo-content">
+          <span class="promo-title">SOFTWARE DIVISION ATTENDANCE</span>
+          <span class="promo-subtitle"></span>
+        </div>
+        <div class="promo-tag">
+          <span class="pulse-green-dot"></span>
+          <span>Official App v1.0.3</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monetized Ad Slot (Disabled, can be enabled by changing false to true) -->
+    @if (false) {
+      <div class="sidebar-brand-promo">
+        <div class="brand-promo-card ad-banner-card" [style.border-color]="ads[currentAdIndex()].color + '55'">
+          <span class="ad-badge">SPONSORED AD</span>
+          <div class="promo-logo-outer" [style.background]="'linear-gradient(135deg, ' + ads[currentAdIndex()].color + ' 0%, #1e293b 100%)'">
+            <div class="promo-logo-inner">
+              <span class="ad-icon">{{ ads[currentAdIndex()].image }}</span>
+            </div>
+          </div>
+          <div class="promo-content">
+            <span class="promo-title ad-title">{{ ads[currentAdIndex()].title }}</span>
+            <p class="promo-description ad-desc">{{ ads[currentAdIndex()].description }}</p>
+          </div>
+          <a [href]="ads[currentAdIndex()].link" target="_blank" class="promo-tag ad-cta" (click)="onAdClick(ads[currentAdIndex()], $event)" [style.background]="ads[currentAdIndex()].color" [style.color]="'#fff'">
+            <span>{{ ads[currentAdIndex()].cta }}</span>
+          </a>
+          <div class="ad-footer-row">
+            <div class="ad-footer-branding">
+              <img src="logo-early.png" class="ad-footer-logo" alt="Attendance Logo" />
+              <span class="ad-footer-text">Attendance</span>
+            </div>
+            <a href="mailto:mihiranga.office@gmail.com?subject=Advertise%20on%20SE-Attendance%20System" class="sponsor-link">Advertise & Earn &rarr;</a>
+          </div>
+        </div>
+      </div>
+    }
 
     <div class="sidebar-footer">
       <div class="user-info">

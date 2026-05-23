@@ -38,7 +38,12 @@
       ".read": "root.child('users').child(auth.uid).child('role').val() === 'admin'",
       ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'"
     },
+    "foodRequests": {
+      ".read": "auth.uid !== null",
+      ".write": "auth.uid !== null"
+    },
     ".read": false,
     ".write": false
   }
 }
+

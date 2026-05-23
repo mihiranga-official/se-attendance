@@ -2,6 +2,9 @@ import { Injectable } from '@angular/core';
 import { ref, set, get, update, remove, onValue } from 'firebase/database';
 import { database } from '../firebase.config';
 import { AttendanceRecord } from '../models/user.model';
+import { Observable, of, from } from 'rxjs';
+
+
 
 const WORK_START = '08:00';
 const WORK_END = '17:00';
@@ -258,4 +261,64 @@ export class AttendanceService {
     const now = new Date();
     return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   }
+
+  saveFoodRequest(payload: { name: string; division: string; lunchCategory: string }): Observable<any> {
+    const id = `FR-${Date.now()}`;
+    const dateTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const newRequest = {
+      id,
+      dateTime,
+      ...payload
+    };
+    const savePromise = set(ref(database, `foodRequests/${id}`), newRequest)
+      .then(() => {
+        this.saveToLocalStorage(newRequest);
+        return newRequest;
+      })
+      .catch(err => {
+        console.warn('Firebase save failed (using localStorage fallback):', err.message);
+        this.saveToLocalStorage(newRequest);
+        return newRequest;
+      });
+    return from(savePromise);
+  }
+
+  getFoodRequests(): Observable<any[]> {
+    const fetchPromise = get(ref(database, 'foodRequests'))
+      .then(snap => {
+        if (!snap.exists()) {
+          return this.getFromLocalStorage();
+        }
+        const data = snap.val();
+        const list = Object.values(data)
+          .sort((a: any, b: any) => b.dateTime.localeCompare(a.dateTime));
+        localStorage.setItem('localFoodRequests', JSON.stringify(list));
+        return list;
+      })
+      .catch(err => {
+        console.warn('Firebase read failed (using localStorage fallback):', err.message);
+        return this.getFromLocalStorage();
+      });
+    return from(fetchPromise);
+  }
+
+  private saveToLocalStorage(newRequest: any) {
+    try {
+      const list = this.getFromLocalStorage();
+      list.unshift(newRequest);
+      localStorage.setItem('localFoodRequests', JSON.stringify(list));
+    } catch (e) {
+      console.error('LocalStorage write failed:', e);
+    }
+  }
+
+  private getFromLocalStorage(): any[] {
+    try {
+      const data = localStorage.getItem('localFoodRequests');
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
+  }
 }
+

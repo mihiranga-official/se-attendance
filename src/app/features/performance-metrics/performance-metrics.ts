@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { PerformanceService } from '../../core/services/performance.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
@@ -47,6 +48,9 @@ export class PerformanceMetricsComponent implements OnInit {
   bonusLostList = signal<any[]>([]);
   freeMealEligibleList = signal<any[]>([]);
   leaveCoverageList = signal<any[]>([]);
+  foodRequestsCount = signal(0);
+  foodRequestsTotalCost = signal(0);
+  foodRequestsList = signal<any[]>([]);
 
   isAdmin() {
     return this.auth.isAdmin();
@@ -107,11 +111,12 @@ export class PerformanceMetricsComponent implements OnInit {
     this.isLoading.set(true);
     this.error.set(null);
     try {
-      const [sum, trend, recent, leaves] = await Promise.all([
+      const [sum, trend, recent, leaves, foodReqs] = await Promise.all([
         this.perfSvc.getPerformanceData(uid, this.currentYear, this.currentMonth),
         this.perfSvc.getYearlyTrend(uid, this.currentYear),
         this.attendanceSvc.getAttendanceForMonth(uid, this.currentYear, this.currentMonth),
-        this.leaveSvc.getLeavesForMonth(uid, this.currentYear, this.currentMonth)
+        this.leaveSvc.getLeavesForMonth(uid, this.currentYear, this.currentMonth),
+        firstValueFrom(this.attendanceSvc.getFoodRequests())
       ]);
       
       this.summary.set(sum);
@@ -236,6 +241,36 @@ export class PerformanceMetricsComponent implements OnInit {
           reason: l.reason
         })).sort((a, b) => a.date.localeCompare(b.date))
       );
+
+      // 11. Food Requests
+      const userName = this.getSelectedUserName();
+      const userNameTrimmed = userName ? userName.trim().toLowerCase() : '';
+      
+      const filteredFoodReqs = (foodReqs || []).filter((req: any) => {
+        if (!req.dateTime || !req.name) return false;
+        const matchName = req.name.trim().toLowerCase() === userNameTrimmed;
+        if (!matchName) return false;
+        
+        const year = parseInt(req.dateTime.substring(0, 4));
+        const month = parseInt(req.dateTime.substring(5, 7));
+        return year === this.currentYear && month === this.currentMonth;
+      });
+      
+      this.foodRequestsCount.set(filteredFoodReqs.length);
+      
+      let totalCost = 0;
+      const list = filteredFoodReqs.map((req: any) => {
+        const cost = this.parseLunchCost(req.lunchCategory);
+        totalCost += cost;
+        const datePart = req.dateTime.substring(0, 10);
+        return {
+          date: datePart,
+          info: `${req.lunchCategory}`
+        };
+      }).sort((a: any, b: any) => a.date.localeCompare(b.date));
+      
+      this.foodRequestsTotalCost.set(totalCost);
+      this.foodRequestsList.set(list);
     } catch (e: any) {
       console.error('Performance Load Error:', e);
       this.error.set('Could not load performance data. Please try again.');
@@ -254,6 +289,61 @@ export class PerformanceMetricsComponent implements OnInit {
     if (this.selectedUser && !usersInDept.find(u => u.uid === this.selectedUser)) {
       this.selectedUser = usersInDept[0]?.uid || null;
       this.loadMetrics();
+    }
+  }
+
+  getSelectedUserName(): string | null {
+    const uid = this.selectedUser;
+    if (!uid) return null;
+    const matched = this.users().find(u => u.uid === uid);
+    if (matched) return matched.name;
+    const current = this.auth.userProfile();
+    if (current && current.uid === uid) return current.name;
+    return null;
+  }
+
+  parseLunchCost(cat: string): number {
+    if (!cat) return 0;
+    const match = cat.match(/Rs\.\s*(\d+)/i);
+    return match ? parseInt(match[1]) : 0;
+  }
+
+  downloadCSV() {
+    const userName = this.getSelectedUserName() || 'Employee';
+    const monthName = this.months.find(m => m.v === this.currentMonth)?.n || 'Month';
+    const fileName = `Analytics_${userName.replace(/\s+/g, '_')}_${monthName}_${this.currentYear}.csv`;
+    
+    let csvContent = `Employee Name,${userName}\n`;
+    csvContent += `Period,${monthName} ${this.currentYear}\n`;
+    csvContent += `Attendance Score,${this.summary()?.attendancePercentage || 0}%\n`;
+    csvContent += `Present Days,${this.summary()?.presentDays || 0} days\n`;
+    csvContent += `Total Working Days,${this.summary()?.totalWorkingDays || 0} days\n\n`;
+    
+    csvContent += `Metric,Value,Details\n`;
+    csvContent += `Late Arrival Days,${this.summary()?.lateDays || 0},"${this.lateArrivalsList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
+    csvContent += `Early Leave Days,${this.summary()?.earlyLeaveDays || 0},"${this.earlyLeavesList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
+    csvContent += `Half Days,${this.summary()?.halfDays || 0},"${this.halfDaysList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
+    csvContent += `Incomplete Days,${this.summary()?.incompleteDays || 0},"${this.incompleteDaysList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
+    csvContent += `Overtime Hours,${this.summary()?.totalOTHours || 0}h,"${this.overtimeList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
+    csvContent += `24H Shift Count,${this.summary()?.twentyFourHourShifts || 0},"${this.twentyFourHourShiftsList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
+    csvContent += `Bonus Eligible Days,${this.summary()?.bonusEligibleDays || 0},"${this.bonusEligibleList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
+    csvContent += `Bonus Lost Days,${this.summary()?.bonusLostDays || 0},"${this.bonusLostList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
+    csvContent += `Free Meal Eligible Days,${this.summary()?.freeMealEligibleDays || 0},"${this.freeMealEligibleList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
+    csvContent += `Leave Coverage Count,${this.leaveCoverageList().length},"${this.leaveCoverageList().map(i => `${i.date}: ${i.info} (${i.reason})`).join('; ')}"\n`;
+    csvContent += `Food Requests Count,${this.foodRequestsCount() || 0},"${this.foodRequestsList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
+    csvContent += `Total Food Cost,Rs. ${this.foodRequestsTotalCost() || 0},N/A\n`;
+    
+    // Create a secure download link and trigger it
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 }

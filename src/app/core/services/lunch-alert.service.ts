@@ -1,14 +1,27 @@
-import { Injectable, inject, NgZone } from '@angular/core';
+import { Injectable, inject, NgZone, effect } from '@angular/core';
 import { AuthService } from './auth.service';
+import { Router } from '@angular/router';
 import { interval, Subscription } from 'rxjs';
 
-export const LUNCH_ORDER_URL = 'https://example.com/order-lunch';
+export const LUNCH_ORDER_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdoPrpw7Ybg5jujOEtAqcTCyTU2z7VRBdxeWoi6BTwLbnm7dg/viewform?pli=1&pli=1&fbzx=4917293566024464660';
 
 @Injectable({ providedIn: 'root' })
 export class LunchAlertService {
   private auth = inject(AuthService);
   private ngZone = inject(NgZone);
+  private router = inject(Router);
   private timerSub?: Subscription;
+
+  constructor() {
+    // Run alert check immediately when both auth user and profile resolve
+    effect(() => {
+      const user = this.auth.currentUser();
+      const profile = this.auth.userProfile();
+      if (user && profile) {
+        this.checkLunchAlert();
+      }
+    });
+  }
 
   startTracking() {
     this.stopTracking();
@@ -34,16 +47,20 @@ export class LunchAlertService {
   private checkLunchAlert() {
     const user = this.auth.currentUser();
     if (!user) return;
-    const uid = user.uid;
+    
+    const profile = this.auth.userProfile();
+    // Suppress for admin users or if profile isn't loaded yet
+    if (!profile || profile.role === 'admin') return;
 
+    const uid = user.uid;
     const now = new Date();
     const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     // Monday to Saturday are 1 to 6
     if (day === 0) return; // Ignore Sunday
 
     const hours = now.getHours();
-    // Must be between 8:00 AM and 9:00 AM (8:00 to 8:59)
-    if (hours !== 8) return;
+    // Must be between 6:00 AM and 9:00 AM (6:00 to 8:59)
+    if (hours < 6 || hours >= 9) return;
 
     const todayStr = now.toISOString().split('T')[0];
     const orderedKey = `lunch_ordered_${uid}`;
@@ -72,7 +89,7 @@ export class LunchAlertService {
     if (hasOrdered) {
       localStorage.setItem(orderedKey, todayStr);
     } else {
-      window.open(LUNCH_ORDER_URL, '_blank');
+      this.router.navigate(['/food-request']);
     }
   }
 }

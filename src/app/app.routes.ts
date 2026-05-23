@@ -46,7 +46,12 @@ export const routes: Routes = [
       {
         path: 'performance-metrics',
         loadComponent: () => import('./features/performance-metrics/performance-metrics').then(m => m.PerformanceMetricsComponent)
+      },
+      {
+        path: 'food-request',
+        loadComponent: () => import('./features/food-request/food-request').then(m => m.FoodRequestComponent)
       }
+
     ]
   },
   {
