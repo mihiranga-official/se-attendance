@@ -22,7 +22,7 @@ export class FcmService {
       if (permission === 'granted') {
         const token = await getToken(messaging, { vapidKey: this.vapidKey });
         if (token) {
-          console.log('FCM Token retrieved:', token);
+          // console.log('FCM Token retrieved:', token);
           await this.saveTokenToDatabase(uid, token);
         } else {
           console.log('No registration token available. Request permission to generate one.');

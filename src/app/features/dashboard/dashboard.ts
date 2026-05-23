@@ -6,6 +6,7 @@ import { AttendanceService } from '../../core/services/attendance.service';
 import { SummaryService } from '../../core/services/summary.service';
 import { BonusService } from '../../core/services/bonus.service';
 import { CelebrationService } from '../../core/services/celebration.service';
+import { LeaveService } from '../../core/services/leave.service';
 import { AttendanceRecord, MonthlySummary } from '../../core/models/user.model';
 import { BonusCardComponent, BonusProgress } from '../../shared/components/bonus-card/bonus-card';
 import { AttendanceStatusCardComponent } from '../../shared/components/attendance-status-card/attendance-status-card';
@@ -23,6 +24,7 @@ export class DashboardComponent implements OnInit {
   private summarySvc = inject(SummaryService);
   private bonusSvc = inject(BonusService);
   private celebrationSvc = inject(CelebrationService);
+  private leaveSvc = inject(LeaveService);
 
   today = new Date();
   todayStr = this.attendanceSvc.getTodayStr();
@@ -32,6 +34,11 @@ export class DashboardComponent implements OnInit {
   monthlySummary = signal<MonthlySummary | null>(null);
   bonusProgress = signal<BonusProgress | null>(null);
   recentRecords = signal<AttendanceRecord[]>([]);
+
+  // Lists for card hover breakdowns
+  presentDaysList = signal<{ date: string; checkIn?: string; checkOut?: string; actualStatus?: string }[]>([]);
+  leaveDaysList = signal<{ date: string; reason: string; type: string; isCovered?: boolean; coveredByDate?: string }[]>([]);
+  overtimeList = signal<{ date: string; workedHours?: number; otHours: number }[]>([]);
 
   isCheckingIn = signal(false);
   isCheckingOut = signal(false);
@@ -61,6 +68,40 @@ export class DashboardComponent implements OnInit {
   get isSunday(): boolean { return this.today.getDay() === 0; }
   get isSaturday(): boolean { return this.today.getDay() === 6; }
 
+  calculateLists(recent: AttendanceRecord[], leaves: any[]) {
+    const present = recent
+      .filter(r => r.checkIn)
+      .map(r => ({
+        date: r.date,
+        checkIn: r.checkIn,
+        checkOut: r.checkOut,
+        actualStatus: r.actualStatus || (r.status === 'present' ? 'Present' : r.status)
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    this.presentDaysList.set(present);
+
+    const leaveList = leaves
+      .map(l => ({
+        date: l.date,
+        reason: l.reason,
+        type: l.type === 'full' ? 'Full Day' : l.type === 'half-morning' ? 'Half Day (M)' : 'Half Day (A)',
+        isCovered: l.isCovered,
+        coveredByDate: l.coveredByDate
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    this.leaveDaysList.set(leaveList);
+
+    const ot = recent
+      .filter(r => r.otHours && r.otHours > 0)
+      .map(r => ({
+        date: r.date,
+        workedHours: r.workedHours,
+        otHours: r.otHours || 0
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    this.overtimeList.set(ot);
+  }
+
   async ngOnInit() {
     const uid = this.auth.currentUser()?.uid;
     if (!uid) return;
@@ -69,17 +110,19 @@ export class DashboardComponent implements OnInit {
     setInterval(() => this.currentTime.set(this.attendanceSvc.getCurrentTimeStr()), 60000);
 
     this.isLoadingBonus.set(true);
-    const [rec, summary, recent, bonus] = await Promise.all([
+    const [rec, summary, recent, bonus, leaves] = await Promise.all([
       this.attendanceSvc.getAttendanceForDate(uid, this.todayStr),
       this.summarySvc.getMonthlySummary(uid, this.today.getFullYear(), this.today.getMonth() + 1),
       this.attendanceSvc.getAttendanceForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1),
-      this.bonusSvc.getBonusProgress(uid)
+      this.bonusSvc.getBonusProgress(uid),
+      this.leaveSvc.getLeavesForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1)
     ]);
 
     this.todayRecord.set(rec);
     this.monthlySummary.set(summary);
     this.bonusProgress.set(bonus);
     this.recentRecords.set(recent.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7));
+    this.calculateLists(recent, leaves);
     this.isLoadingBonus.set(false);
 
     // Check for milestone celebration
@@ -197,8 +240,13 @@ export class DashboardComponent implements OnInit {
   async refreshSummary() {
     const uid = this.auth.currentUser()?.uid;
     if (!uid) return;
-    const summary = await this.summarySvc.getMonthlySummary(uid, this.today.getFullYear(), this.today.getMonth() + 1);
+    const [summary, recent, leaves] = await Promise.all([
+      this.summarySvc.getMonthlySummary(uid, this.today.getFullYear(), this.today.getMonth() + 1),
+      this.attendanceSvc.getAttendanceForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1),
+      this.leaveSvc.getLeavesForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1)
+    ]);
     this.monthlySummary.set(summary);
+    this.calculateLists(recent, leaves);
   }
 
   getStatusClass(status: string): string {

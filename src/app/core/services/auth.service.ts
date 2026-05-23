@@ -10,7 +10,7 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential
 } from 'firebase/auth';
-import { ref, set, get } from 'firebase/database';
+import { ref, set, get, update } from 'firebase/database';
 import { auth, database } from '../firebase.config';
 import { UserProfile } from '../models/user.model';
 import { FcmService } from './fcm.service';
@@ -58,6 +58,34 @@ export class AuthService {
 
       await set(ref(database, `users/${cred.user.uid}`), adminProfile);
       this.userProfile.set(adminProfile);
+
+      // Clean up any existing admin accounts to prevent duplicates
+      // (Runs after setting current profile so database rules permit reading/writing /users)
+      try {
+        const usersSnap = await get(ref(database, 'users'));
+        if (usersSnap.exists()) {
+          const usersObj = usersSnap.val();
+          const updates: Record<string, null> = {};
+          for (const uid in usersObj) {
+            const user = usersObj[uid];
+            if (
+              user &&
+              user.role === 'admin' &&
+              (user.email === 'admin@damro.local' || user.email === 'da@damro.local') &&
+              uid !== cred.user.uid
+            ) {
+              updates[`users/${uid}`] = null;
+            }
+          }
+          if (Object.keys(updates).length > 0) {
+            await update(ref(database), updates);
+            console.log('Cleaned up duplicate admin accounts during login:', Object.keys(updates));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to clean up old admin accounts during login:', err);
+      }
+
       this.router.navigate(['/admin']);
       return;
     }
@@ -94,6 +122,16 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
+    const user = this.currentUser();
+    if (user) {
+      try {
+        const userRef = ref(database, `users/${user.uid}`);
+        await update(userRef, { fcmToken: null });
+        console.log('FCM Token cleared during logout.');
+      } catch (error) {
+        console.error('Failed to clear FCM token during logout:', error);
+      }
+    }
     await signOut(auth);
     this.userProfile.set(null);
     this.router.navigate(['/login']);

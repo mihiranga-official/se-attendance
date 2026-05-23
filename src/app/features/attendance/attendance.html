@@ -29,23 +29,22 @@
       }
 
       @for (day of calendarDays(); track day.date) {
-      <div class="calendar-day" [class.outside]="!day.isCurrentMonth" [class.today]="day.isToday"
-        [class.sunday]="day.dayOfWeek === 0" [class.saturday]="day.dayOfWeek === 6" (click)="selectDay(day)">
+      <div class="calendar-day" [class]="getDayClass(day)" (click)="selectDay(day)">
         <div class="day-number">{{ day.day }}</div>
 
-        @if (day.record) {
-        <div class="day-stats" [class.is-24h]="day.record.is24HourShift">
-          @if (day.record.status === 'present') {
-            @if (day.record.is24HourShift) {
+        @if (day.record || day.leave || (day.coveringFor && day.coveringFor.length > 0)) {
+        <div class="day-stats" [class.is-24h]="day.record?.is24HourShift">
+          @if (day.record?.status === 'present') {
+            @if (day.record?.is24HourShift) {
               @if (day.isStart) {
                 <div class="status-marker start">
                   <span class="marker-dot success"></span>
-                  <span class="marker-time">START {{ day.record.checkIn }}</span>
+                  <span class="marker-time">START {{ day.record?.checkIn }}</span>
                 </div>
               } @else if (day.isEnd) {
                 <div class="status-marker end">
                   <span class="marker-dot danger"></span>
-                  <span class="marker-time">END {{ day.record.checkOut }}</span>
+                  <span class="marker-time">END {{ day.record?.checkOut }}</span>
                 </div>
               } @else if (day.isContinuation) {
                 <div class="status-marker mid">
@@ -56,17 +55,61 @@
             } @else {
               <div class="time-block in">
                 <span class="label">IN</span>
-                <span class="time">{{ day.record.checkIn }}</span>
+                <span class="time">{{ day.record?.checkIn }}</span>
               </div>
               <div class="time-block out">
                 <span class="label">OUT</span>
-                <span class="time">{{ day.record.checkOut ?? '--:--' }}</span>
+                <span class="time">{{ day.record?.checkOut ?? '--:--' }}</span>
               </div>
             }
-          } @else if (day.record.status === 'holiday') {
-            <div class="status-badge holiday">HOLIDAY</div>
-          } @else if (day.record.status === 'leave') {
-            <div class="status-badge leave">LEAVE</div>
+            @if (day.leave?.isCovered && day.leave?.coveredByDate) {
+              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 8 : 4)" style="margin-top: 4px; display: block; width: 100%; text-align: center;">
+                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 8 : 4 }}h)
+              </div>
+            }
+          } @else if (day.record?.status === 'holiday') {
+            <div class="status-badge holiday" [class.covered]="day.leave?.isCovered">
+              <span>HOLIDAY</span>
+              @if (day.leave?.isCovered) {
+                <span class="covered-tag">COV</span>
+              }
+            </div>
+            @if (day.leave?.isCovered && day.leave?.coveredByDate) {
+              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 8 : 4)">
+                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 8 : 4 }}h)
+              </div>
+            }
+          } @else if (day.record?.status === 'weekend') {
+            <div class="status-badge weekend" [class.covered]="day.leave?.isCovered">
+              <span>WEEKEND</span>
+              @if (day.leave?.isCovered) {
+                <span class="covered-tag">COV</span>
+              }
+            </div>
+            @if (day.leave?.isCovered && day.leave?.coveredByDate) {
+              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 8 : 4)">
+                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 8 : 4 }}h)
+              </div>
+            }
+          } @else if (day.record?.status === 'leave' || day.leave) {
+            <div class="status-badge leave" [class.covered]="day.leave?.isCovered">
+              <span>LEAVE</span>
+              @if (day.leave?.isCovered) {
+                <span class="covered-tag">COV</span>
+              }
+            </div>
+            @if (day.leave?.isCovered && day.leave?.coveredByDate) {
+              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 8 : 4)">
+                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 8 : 4 }}h)
+              </div>
+            }
+          }
+
+          @if (day.coveringFor && day.coveringFor.length > 0) {
+            <div class="covering-badge" [class.incomplete]="(day.coveringFor[0].coveredHours ?? 0) < (day.coveringFor[0].type === 'full' ? 8 : 4)">
+              <span class="dot-covering" [class.incomplete]="(day.coveringFor[0].coveredHours ?? 0) < (day.coveringFor[0].type === 'full' ? 8 : 4)"></span>
+              <span>Covering: {{ day.coveringFor[0].date | date:'MMM d' }} ({{ day.coveringFor[0].coveredHours ?? 0 }}/{{ day.coveringFor[0].type === 'full' ? 8 : 4 }}h)</span>
+            </div>
           }
         </div>
         }
@@ -86,6 +129,18 @@
       <div class="legend-item">
         <span class="dot dot-leave"></span>
         <span>Leave</span>
+      </div>
+      <div class="legend-item">
+        <span class="dot dot-leave-covered"></span>
+        <span>Covered Leave</span>
+      </div>
+      <div class="legend-item">
+        <span class="dot dot-leave-partially-covered"></span>
+        <span>Partially Covered Leave</span>
+      </div>
+      <div class="legend-item">
+        <span class="dot dot-covering-day"></span>
+        <span>Covering Day</span>
       </div>
       <div class="legend-item">
         <span class="dot dot-holiday"></span>
@@ -112,63 +167,184 @@
       </div>
 
       <div class="modal-body">
-        <div class="shift-form-container" [class.two-col]="editShiftType === '24h'">
+        @if (saveError()) {
+          <div class="alert alert-error">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>{{ saveError() }}</span>
+          </div>
+        }
+        @if (saveMsg()) {
+          <div class="alert alert-success">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span>{{ saveMsg() }}</span>
+          </div>
+        }
+
+        <div class="shift-form-container" [class.two-col]="editStatus !== 'covering'">
           <!-- Column 1: Primary Inputs -->
           <div class="form-column">
             <div class="form-group">
-              <label>Shift Type</label>
-              <select [(ngModel)]="editShiftType" (change)="onShiftTypeChange()" class="input-field">
-                <option value="normal">Normal Shift (8:00 AM - 5:00 PM)</option>
-                <option value="24h">24 Hours Shift</option>
+              <label>Entry Status</label>
+              <select [(ngModel)]="editStatus" (change)="onStatusChange()" class="input-field">
+                <option value="present">Present</option>
+                @if (activeCoveringLeaves.length > 0) {
+                  <option value="covering">Covering Day</option>
+                }
+                <option value="leave">Leave</option>
+                <option value="holiday">Holiday</option>
+                <option value="weekend">Weekend / Sunday</option>
               </select>
             </div>
 
-            @if (editShiftType === 'normal') {
-              <div class="form-row">
-                <div class="form-group">
-                  <label>Check In Time</label>
-                  <input type="time" [(ngModel)]="editCheckIn" class="input-field">
+            @if (activeCoveringLeaves.length > 0 && editStatus === 'covering') {
+              <div class="covering-day-editor-card" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.15); padding: 1rem; border-radius: 12px; margin-bottom: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 8px; color: #6366f1; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 0.5rem;">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                  </svg>
+                  <span>Leave Coverage Editor</span>
                 </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                  This day is covering the leave on <strong>{{ activeCoveringLeaves[0].date | date:'mediumDate' }}</strong>.
+                </p>
                 <div class="form-group">
-                  <label>Check Out Time</label>
-                  <input type="time" [(ngModel)]="editCheckOut" class="input-field">
+                  <label style="font-size: 0.7rem;">Hours Covered on this Day</label>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="number" [(ngModel)]="editCoveringHoursValue" min="0" max="24" class="input-field" style="max-width: 100px;">
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">
+                      / {{ activeCoveringLeaves[0].type === 'full' ? 8 : 4 }} hours required
+                    </span>
+                  </div>
                 </div>
-              </div>
-            } @else {
-              <div class="form-row">
-                <div class="form-group">
-                  <label>Check-in Date</label>
-                  <input type="date" [(ngModel)]="editCheckInDate" class="input-field">
-                </div>
-                <div class="form-group">
-                  <label>Check-in Time</label>
-                  <input type="time" [(ngModel)]="editCheckIn" class="input-field">
-                </div>
-              </div>
 
-              <div class="form-row">
-                <div class="form-group">
-                  <label>Checkout Date</label>
-                  <input type="date" [(ngModel)]="editCheckOutDate" class="input-field">
-                </div>
-                <div class="form-group">
-                  <label>Checkout Time</label>
-                  <input type="time" [(ngModel)]="editCheckOut" class="input-field">
-                </div>
-              </div>
-
-              <div class="benefit-banner compact">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                  <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
-                </svg>
-                <span>2H Break & Free Meals Included</span>
+                @if (editCoveringHoursValue < (activeCoveringLeaves[0].type === 'full' ? 8 : 4)) {
+                  <div style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--warning); display: flex; align-items: center; gap: 6px;">
+                    <span class="dot" style="background: var(--warning); width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span>
+                    <span>Incomplete coverage: {{ (activeCoveringLeaves[0].type === 'full' ? 8 : 4) - editCoveringHoursValue }} hours pending.</span>
+                  </div>
+                } @else {
+                  <div style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--success); display: flex; align-items: center; gap: 6px;">
+                    <span class="dot" style="background: var(--success); width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span>
+                    <span>Fully Covered!</span>
+                  </div>
+                }
               </div>
             }
 
-            <div class="form-group">
-              <label>Notes <span class="optional-label">(Optional)</span></label>
-              <textarea [(ngModel)]="editNotes" placeholder="Additional notes..." class="input-field textarea-sm"></textarea>
-            </div>
+            @if (editStatus === 'present') {
+              <div class="form-group">
+                <label>Shift Type</label>
+                <select [(ngModel)]="editShiftType" (change)="onShiftTypeChange()" class="input-field">
+                  <option value="normal">Normal Shift (8:00 AM - 5:00 PM)</option>
+                  <option value="24h">24 Hours Shift</option>
+                </select>
+              </div>
+
+              @if (editShiftType === 'normal') {
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Check In Time</label>
+                    <input type="time" [(ngModel)]="editCheckIn" class="input-field">
+                  </div>
+                  <div class="form-group">
+                    <label>Check Out Time</label>
+                    <input type="time" [(ngModel)]="editCheckOut" class="input-field">
+                  </div>
+                </div>
+              } @else {
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Check-in Date</label>
+                    <input type="date" [(ngModel)]="editCheckInDate" class="input-field">
+                  </div>
+                  <div class="form-group">
+                    <label>Check-in Time</label>
+                    <input type="time" [(ngModel)]="editCheckIn" class="input-field">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Checkout Date</label>
+                    <input type="date" [(ngModel)]="editCheckOutDate" class="input-field">
+                  </div>
+                  <div class="form-group">
+                    <label>Checkout Time</label>
+                    <input type="time" [(ngModel)]="editCheckOut" class="input-field">
+                  </div>
+                </div>
+
+                <div class="benefit-banner compact">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                    <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+                  </svg>
+                  <span>2H Break & Free Meals Included</span>
+                </div>
+              }
+
+              <div class="form-group">
+                <label>Notes <span class="optional-label">(Optional)</span></label>
+                <textarea [(ngModel)]="editNotes" placeholder="Additional notes..." class="input-field textarea-sm"></textarea>
+              </div>
+            } @else if (editStatus === 'leave') {
+              <div class="form-group">
+                <label>Leave Reason</label>
+                <input type="text" [(ngModel)]="editLeaveReason" placeholder="e.g. Medical, Personal, Casual" class="input-field">
+              </div>
+            } @else {
+              <div class="form-group">
+                <label>Notes <span class="optional-label">(Optional)</span></label>
+                <textarea [(ngModel)]="editNotes" placeholder="Additional notes..." class="input-field textarea-sm"></textarea>
+              </div>
+            }
+
+            <!-- Common Coverage Section: available for Present, Leave, Holiday, Weekend -->
+            @if (editStatus !== 'covering') {
+              <div style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 0.5rem;">
+                <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.75rem;">
+                  <input type="checkbox" [(ngModel)]="editLeaveIsCovered" id="edit-leave-is-covered" style="width: auto;">
+                  <label for="edit-leave-is-covered" style="margin-bottom: 0; font-weight: 700; font-size: 0.85rem;">Covered on another day</label>
+                </div>
+
+                @if (editLeaveIsCovered) {
+                  <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label>Day Type</label>
+                    <select [(ngModel)]="editLeaveType" class="input-field">
+                      <option value="full">Full Day (8h Required)</option>
+                      <option value="half-morning">Half Day - Morning (4h Required)</option>
+                      <option value="half-afternoon">Half Day - Afternoon (4h Required)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Covering Date</label>
+                      <input type="date" [(ngModel)]="editLeaveCoveredByDate" class="input-field">
+                    </div>
+                    <div class="form-group">
+                      <label>Hours Covered <span class="optional-label">(Req: {{ editLeaveType === 'full' ? 8 : 4 }}h)</span></label>
+                      <input type="number" [(ngModel)]="editLeaveCoveredHours" min="0" max="24" class="input-field">
+                    </div>
+                  </div>
+
+                  @if (editLeaveCoveredHours < (editLeaveType === 'full' ? 8 : 4)) {
+                    <div class="benefit-banner compact warning-banner" style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.1); color: var(--warning); display: flex; align-items: center; gap: 6px; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.75rem; margin-top: 0.5rem;">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="flex-shrink: 0;">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                      </svg>
+                      <span>Incomplete coverage: {{ (editLeaveType === 'full' ? 8 : 4) - editLeaveCoveredHours }} hours pending</span>
+                    </div>
+                  } @else {
+                    <div class="benefit-banner compact success-banner" style="background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.1); color: var(--success); display: flex; align-items: center; gap: 6px; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.75rem; margin-top: 0.5rem;">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="flex-shrink: 0;">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                      <span>Fully Covered</span>
+                    </div>
+                  }
+                }
+              </div>
+            }
           </div>
 
           <!-- Column 2: Breakdown & Quick Actions -->
@@ -222,7 +398,7 @@
         <div class="spacer"></div>
         <button class="btn-secondary" (click)="showModal.set(false)" [disabled]="isSaving()">Cancel</button>
         <button class="btn-primary" (click)="saveEntry()" [disabled]="isSaving()">
-          @if (isSaving()) { <span class="spinner-sm"></span> }
+          @if (isSaving()) { <span class="spinner"></span> }
           <span>Save Entry</span>
         </button>
       </div>

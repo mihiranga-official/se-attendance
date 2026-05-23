@@ -42,6 +42,10 @@ export class LeaveService {
   }
 
 
+  async updateLeaveCoveredHours(uid: string, leaveId: string, hours: number): Promise<void> {
+    await update(ref(database, `leaves/${uid}/${leaveId}`), { coveredHours: hours });
+  }
+
   async deleteLeave(uid: string, leaveId: string): Promise<void> {
     await set(ref(database, `leaves/${uid}/${leaveId}`), null);
   }

@@ -24,6 +24,8 @@ export class LeavesComponent implements OnInit {
   leaveDate = '';
   leaveType: 'full' | 'half-morning' | 'half-afternoon' = 'full';
   leaveReason = '';
+  isCovered = false;
+  coveredByDate = '';
   isSaving = signal(false);
   errorMsg = signal('');
 
@@ -49,6 +51,8 @@ export class LeavesComponent implements OnInit {
     this.leaveDate = new Date().toISOString().split('T')[0];
     this.leaveType = 'full';
     this.leaveReason = '';
+    this.isCovered = false;
+    this.coveredByDate = '';
     this.errorMsg.set('');
     this.showModal.set(true);
   }
@@ -68,11 +72,16 @@ export class LeavesComponent implements OnInit {
 
     this.isSaving.set(true);
     try {
-      await this.leaveSvc.applyLeave(uid, {
+      const leaveData: any = {
         date: this.leaveDate,
         type: this.leaveType,
         reason: this.leaveReason
-      });
+      };
+      if (this.isCovered) {
+        leaveData.isCovered = true;
+        leaveData.coveredByDate = this.coveredByDate || this.leaveDate;
+      }
+      await this.leaveSvc.applyLeave(uid, leaveData);
       await this.loadLeaves();
       this.closeModal();
     } catch (e: any) {

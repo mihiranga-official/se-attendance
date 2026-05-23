@@ -121,47 +121,107 @@
 
       <!-- Small Stats Sub-grid (fills the space indicated in the screenshot) -->
       <div class="stats-mini-grid">
-        @if (monthlySummary()) {
-          <div class="stat-card stat-present">
-            <div class="stat-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">{{ monthlySummary()?.presentDays }}</span>
-              <span class="stat-label">Present Days for This Month</span>
+        <div class="stat-card stat-present">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ monthlySummary()?.presentDays ?? 0 }}</span>
+            <span class="stat-label">Present Days for This Month</span>
+          </div>
+          <!-- Hover Popup Detail -->
+          <div class="hover-popup">
+            <h4>Present Days Detail</h4>
+            <div class="popup-scroll">
+              @if (presentDaysList().length === 0) {
+                <p class="no-records">No present days logged this month.</p>
+              } @else {
+                <ul class="popup-list">
+                  @for (item of presentDaysList(); track item.date) {
+                    <li class="popup-item">
+                      <span class="popup-date">{{ formatDate(item.date) }}</span>
+                      <span class="popup-time">{{ item.checkIn }} - {{ item.checkOut ?? '—' }}</span>
+                      <span class="popup-status-text badge-success">{{ item.actualStatus }}</span>
+                    </li>
+                  }
+                </ul>
+              }
             </div>
           </div>
+        </div>
 
-          <div class="stat-card stat-leave">
-            <div class="stat-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z" /></svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">{{ monthlySummary()?.leaveDays }}</span>
-              <span class="stat-label">Leave Days for This Month</span>
+        <div class="stat-card stat-leave">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z" /></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ monthlySummary()?.leaveDays ?? 0 }}</span>
+            <span class="stat-label">Leave Days for This Month</span>
+          </div>
+          <!-- Hover Popup Detail -->
+          <div class="hover-popup">
+            <h4>Leave Days Detail</h4>
+            <div class="popup-scroll">
+              @if (leaveDaysList().length === 0) {
+                <p class="no-records">No approved leaves this month.</p>
+              } @else {
+                <ul class="popup-list">
+                  @for (item of leaveDaysList(); track item.date) {
+                    <li class="popup-item leave-item">
+                      <div class="popup-row-main">
+                        <span class="popup-date">{{ formatDate(item.date) }}</span>
+                        <span class="popup-type type-badge">{{ item.type }}</span>
+                      </div>
+                      <span class="popup-reason">{{ item.reason }}</span>
+                      @if (item.isCovered) {
+                        <div class="popup-cover">Covered on: {{ item.coveredByDate }}</div>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
             </div>
           </div>
+        </div>
 
-          <div class="stat-card stat-percent">
-            <div class="stat-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" /></svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">{{ monthlySummary()?.attendancePercentage }}%</span>
-              <span class="stat-label">Attendance for This Month</span>
-            </div>
+        <div class="stat-card stat-percent">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" /></svg>
           </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ monthlySummary()?.attendancePercentage ?? 0 }}%</span>
+            <span class="stat-label">Attendance for This Month</span>
+          </div>
+        </div>
 
-          <div class="stat-card stat-ot">
-            <div class="stat-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" /></svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">{{ monthlySummary()?.totalOTHours }}h</span>
-              <span class="stat-label">Overtime Hours</span>
+        <div class="stat-card stat-ot">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" /></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ monthlySummary()?.totalOTHours ?? 0 }}h</span>
+            <span class="stat-label">Overtime Hours</span>
+          </div>
+          <!-- Hover Popup Detail -->
+          <div class="hover-popup">
+            <h4>Overtime Detail</h4>
+            <div class="popup-scroll">
+              @if (overtimeList().length === 0) {
+                <p class="no-records">No overtime hours logged this month.</p>
+              } @else {
+                <ul class="popup-list">
+                  @for (item of overtimeList(); track item.date) {
+                    <li class="popup-item">
+                      <span class="popup-date">{{ formatDate(item.date) }}</span>
+                      <span class="popup-worked">Worked: {{ item.workedHours?.toFixed(1) }}h</span>
+                      <span class="popup-ot ot-badge">+{{ item.otHours.toFixed(1) }}h OT</span>
+                    </li>
+                  }
+                </ul>
+              }
             </div>
           </div>
-        }
+        </div>
       </div>
     </div>
   </div>

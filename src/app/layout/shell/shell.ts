@@ -3,6 +3,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { InactivityService } from '../../core/services/inactivity.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { LunchAlertService } from '../../core/services/lunch-alert.service';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -16,11 +17,13 @@ export class ShellComponent implements OnInit {
   auth = inject(AuthService);
   inactivity = inject(InactivityService);
   theme = inject(ThemeService);
+  lunchAlert = inject(LunchAlertService);
   sidebarOpen = signal(false);
   dropdownOpen = signal(false);
 
   ngOnInit() {
     this.inactivity.startTracking();
+    this.lunchAlert.startTracking();
   }
 
   toggleSidebar() {
@@ -40,6 +43,8 @@ export class ShellComponent implements OnInit {
   }
 
   async logout() {
+    this.inactivity.stopTracking();
+    this.lunchAlert.stopTracking();
     await this.auth.logout();
   }
 

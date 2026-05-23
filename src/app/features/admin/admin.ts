@@ -2,7 +2,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as XLSX from 'xlsx';
-import { ref, get, onValue, query, orderByChild, limitToLast } from 'firebase/database';
+import { ref, get, onValue, query, orderByChild, limitToLast, update } from 'firebase/database';
 import { database, functions } from '../../core/firebase.config';
 import { httpsCallable } from 'firebase/functions';
 import { UserService } from '../../core/services/user.service';
@@ -71,7 +71,7 @@ export class AdminComponent implements OnInit {
         const data = snap.exists() ? snap.val() : {};
         // Safety check: handle both Object and Array formats from Firebase
         const usersList = (Array.isArray(data) ? data : Object.values(data))
-          .filter(u => u && typeof u === 'object') as UserProfile[];
+          .filter(u => u && typeof u === 'object' && u.name) as UserProfile[];
 
         console.log('Admin: Users list updated:', usersList.length);
         this.processUsers(usersList);
@@ -105,7 +105,39 @@ export class AdminComponent implements OnInit {
   }
 
   private processUsers(users: UserProfile[]) {
-    this.users.set(users);
+    const currentAdminUid = this.auth.currentUser()?.uid;
+    
+    // Filter out duplicate admin accounts from the UI view
+    const filteredUsers = users.filter(u => {
+      if (u.role === 'admin') {
+        if (currentAdminUid) {
+          return u.uid === currentAdminUid;
+        }
+      }
+      return true;
+    });
+
+    this.users.set(filteredUsers);
+
+    // Automatically clean up duplicate admin accounts in the database
+    if (currentAdminUid) {
+      const duplicatesToDelete = users.filter(u => 
+        u.role === 'admin' && 
+        (u.email === 'admin@damro.local' || u.email === 'da@damro.local') && 
+        u.uid !== currentAdminUid
+      );
+
+      if (duplicatesToDelete.length > 0) {
+        console.log('Admin: Cleaning up duplicate admin accounts from database:', duplicatesToDelete.map(u => u.uid));
+        const updates: Record<string, null> = {};
+        duplicatesToDelete.forEach(u => {
+          updates[`users/${u.uid}`] = null;
+        });
+        update(ref(database), updates)
+          .then(() => console.log('Admin: Successfully cleaned up duplicate admins.'))
+          .catch((err) => console.error('Admin: Failed to clean up duplicate admins:', err));
+      }
+    }
   }
 
   private processRecords(leavesData: any, attendanceSnap: any) {

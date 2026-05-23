@@ -425,6 +425,67 @@
   }
 }
 
+.monthly-targets-section {
+  border-top: 1px solid var(--border);
+  padding-top: 0.85rem;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.targets-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.targets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.target-item {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 4px solid var(--border);
+  background: rgba(0, 0, 0, 0.02);
+
+  &.status-full {
+    background: rgba(16, 185, 129, 0.06);
+    border-left-color: #10b981;
+    .target-value {
+      color: #10b981;
+    }
+  }
+
+  &.status-half {
+    background: rgba(251, 146, 60, 0.06);
+    border-left-color: #fb923c;
+    .target-value {
+      color: #fb923c;
+    }
+  }
+}
+
+.target-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.target-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
 @media (max-width: 640px) {
   .bonus-card {
     grid-column: span 1;
@@ -459,5 +520,10 @@
 
   .progress-percentage {
     font-size: 1.5rem;
+  }
+
+  .targets-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
 }

@@ -87,6 +87,24 @@
         <span class="metric-value">{{ summary()?.lateDays || 0 }}</span>
         <span class="metric-label">Late Arrival Days</span>
       </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Late Arrivals</h4>
+        <div class="popup-scroll">
+          @if (lateArrivalsList().length === 0) {
+            <p class="no-records">No late arrivals this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of lateArrivalsList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
     </div>
 
     <!-- 2. Early Leaves -->
@@ -97,6 +115,24 @@
       <div class="metric-info">
         <span class="metric-value">{{ summary()?.earlyLeaveDays || 0 }}</span>
         <span class="metric-label">Early Leave Days</span>
+      </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Early Leaves</h4>
+        <div class="popup-scroll">
+          @if (earlyLeavesList().length === 0) {
+            <p class="no-records">No early leaves this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of earlyLeavesList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       </div>
     </div>
 
@@ -109,6 +145,24 @@
         <span class="metric-value">{{ summary()?.halfDays || 0 }}</span>
         <span class="metric-label">Half Days</span>
       </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Half Days</h4>
+        <div class="popup-scroll">
+          @if (halfDaysList().length === 0) {
+            <p class="no-records">No half days this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of halfDaysList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
     </div>
 
     <!-- 4. Incomplete Days -->
@@ -119,6 +173,24 @@
       <div class="metric-info">
         <span class="metric-value">{{ summary()?.incompleteDays || 0 }}</span>
         <span class="metric-label">Incomplete Days</span>
+      </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Incomplete Days</h4>
+        <div class="popup-scroll">
+          @if (incompleteDaysList().length === 0) {
+            <p class="no-records">No incomplete days this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of incompleteDaysList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       </div>
     </div>
 
@@ -131,6 +203,24 @@
         <span class="metric-value">{{ summary()?.totalOTHours || 0 }}h</span>
         <span class="metric-label">Overtime Hours</span>
       </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Overtime Hours</h4>
+        <div class="popup-scroll">
+          @if (overtimeList().length === 0) {
+            <p class="no-records">No overtime logged this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of overtimeList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
     </div>
 
     <!-- 6. 24H Shift Count -->
@@ -141,6 +231,24 @@
       <div class="metric-info">
         <span class="metric-value">{{ summary()?.twentyFourHourShifts || 0 }}</span>
         <span class="metric-label">24H Shift Count</span>
+      </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>24H Shifts</h4>
+        <div class="popup-scroll">
+          @if (twentyFourHourShiftsList().length === 0) {
+            <p class="no-records">No 24H shifts logged this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of twentyFourHourShiftsList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       </div>
     </div>
 
@@ -153,6 +261,24 @@
         <span class="metric-value">{{ summary()?.bonusEligibleDays || 0 }}</span>
         <span class="metric-label">Bonus Eligible Days</span>
       </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Bonus Eligible</h4>
+        <div class="popup-scroll">
+          @if (bonusEligibleList().length === 0) {
+            <p class="no-records">No bonus eligible days this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of bonusEligibleList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
     </div>
 
     <!-- 8. Bonus Lost -->
@@ -164,6 +290,24 @@
         <span class="metric-value">{{ summary()?.bonusLostDays || 0 }}</span>
         <span class="metric-label">Bonus Lost Days</span>
       </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Bonus Lost Days</h4>
+        <div class="popup-scroll">
+          @if (bonusLostList().length === 0) {
+            <p class="no-records">No bonus lost days this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of bonusLostList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
     </div>
 
     <!-- 9. Free Meals -->
@@ -174,6 +318,57 @@
       <div class="metric-info">
         <span class="metric-value">{{ summary()?.freeMealEligibleDays || 0 }}</span>
         <span class="metric-label">Free Meal Eligible Days</span>
+      </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Free Meals</h4>
+        <div class="popup-scroll">
+          @if (freeMealEligibleList().length === 0) {
+            <p class="no-records">No free meal eligibility this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of freeMealEligibleList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. Leave Coverage -->
+    <div class="metric-card info">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ leaveCoverageList().length }}</span>
+        <span class="metric-label">Leave Coverage</span>
+      </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Leave Coverage</h4>
+        <div class="popup-scroll">
+          @if (leaveCoverageList().length === 0) {
+            <p class="no-records">No leave coverages logged this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of leaveCoverageList(); track item.date) {
+                <li class="popup-item leave-item">
+                  <div class="popup-row-main">
+                    <span class="popup-date">{{ formatDate(item.date) }}</span>
+                    <span class="popup-type type-badge">Covered</span>
+                  </div>
+                  <span class="popup-reason">{{ item.reason }}</span>
+                  <div class="popup-cover">{{ item.info }}</div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       </div>
     </div>
   </div>

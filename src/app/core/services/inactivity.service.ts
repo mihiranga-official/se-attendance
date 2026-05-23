@@ -56,6 +56,7 @@ export class InactivityService {
     // Start warning timer
     timer(this.WARNING_MS).pipe(takeUntil(this.stop$)).subscribe(() => {
       if (this.showWarning()) {
+        this.stopTracking();
         this.auth.logout();
       }
     });

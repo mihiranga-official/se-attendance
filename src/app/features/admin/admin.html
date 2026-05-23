@@ -83,7 +83,7 @@
                   </td>
                   <td>{{ user.email }}</td>
                   <td><span class="role-badge" [class]="user.role">{{ user.role }}</span></td>
-                  <td>{{ user.createdAt | date:'mediumDate' }}</td>
+                  <td>{{ user.createdAt ? (user.createdAt | date:'mediumDate') : '—' }}</td>
                 </tr>
               }
             </tbody>
@@ -101,6 +101,7 @@
                 <th>Date</th>
                 <th>Type</th>
                 <th>Reason</th>
+                <th>Coverage Status</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -112,6 +113,23 @@
                     <td>{{ leave.date }}</td>
                     <td><span class="type-label" [class]="leave.type">{{ leave.type }}</span></td>
                     <td class="reason-cell" [title]="leave.reason">{{ leave.reason }}</td>
+                    <td>
+                      @if (leave.isCovered) {
+                        @if ((leave.coveredHours ?? 0) < (leave.type === 'full' ? 8 : 4)) {
+                          <span class="badge badge-warning" style="display: inline-flex; align-items: center; gap: 6px;">
+                            <span class="dot" style="width: 6px; height: 6px; border-radius: 50%; background: #d97706; display: inline-block;"></span>
+                            Covered ({{ leave.coveredHours ?? 0 }}/{{ leave.type === 'full' ? 8 : 4 }}h) on {{ leave.coveredByDate | date:'MMM d' }}
+                          </span>
+                        } @else {
+                          <span class="badge badge-success" style="display: inline-flex; align-items: center; gap: 6px;">
+                            <span class="dot" style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+                            Fully Covered on {{ leave.coveredByDate | date:'MMM d' }}
+                          </span>
+                        }
+                      } @else {
+                        <span class="badge badge-secondary">Not Covered</span>
+                      }
+                    </td>
                     <td><span class="badge badge-info">Recorded</span></td>
                   </tr>
                 }

@@ -117,11 +117,15 @@ export class AttendanceService {
         day1Eligible = false;
         day1Reason = 'Left Early';
         
-        const reqMins = dayType === 'saturday' ? 5 * 60 : 9 * 60;
-        const workedRatio = totalWorked / reqMins;
-        if (workedRatio < 0.4) record.actualStatus = 'Incomplete';
-        else if (workedRatio < 0.8) record.actualStatus = 'Half Day';
-        else record.actualStatus = 'Early Leave';
+        if (outMin <= this.toMinutes('12:01')) {
+          record.actualStatus = 'Incomplete';
+        } else {
+          const reqMins = dayType === 'saturday' ? 5 * 60 : 9 * 60;
+          const workedRatio = totalWorked / reqMins;
+          if (workedRatio < 0.4) record.actualStatus = 'Incomplete';
+          else if (workedRatio < 0.8) record.actualStatus = 'Half Day';
+          else record.actualStatus = 'Early Leave';
+        }
       } else {
         record.actualStatus = day1IsLate ? 'Late Arrival' : 'Completed';
       }

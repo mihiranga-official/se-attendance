@@ -17,6 +17,7 @@ interface CalendarDay {
   isContinuation?: boolean;
   isStart?: boolean;
   isEnd?: boolean;
+  coveringFor?: LeaveRecord[];
 }
 
 @Component({
@@ -44,6 +45,14 @@ export class AttendanceComponent implements OnInit {
   editCheckOutDate = '';
   editShiftType: ShiftType = 'normal';
   editNotes = '';
+  editStatus: 'present' | 'leave' | 'holiday' | 'weekend' | 'covering' = 'present';
+  editLeaveType: 'full' | 'half-morning' | 'half-afternoon' = 'full';
+  editLeaveReason = '';
+  editLeaveIsCovered = false;
+  editLeaveCoveredByDate = '';
+  editLeaveCoveredHours = 8;
+  activeCoveringLeaves: LeaveRecord[] = [];
+  editCoveringHoursValue = 8;
   isSaving = signal(false);
   saveMsg = signal('');
   saveError = signal('');
@@ -81,6 +90,16 @@ export class AttendanceComponent implements OnInit {
 
     const recMap = new Map(recs.map(r => [r.date, r]));
     const leaveMap = new Map(leaves.map(l => [l.date, l]));
+
+    // Map of coveringDate -> LeaveRecord[]
+    const coveringMap = new Map<string, LeaveRecord[]>();
+    leaves.forEach(l => {
+      if (l.isCovered && l.coveredByDate) {
+        const list = coveringMap.get(l.coveredByDate) || [];
+        list.push(l);
+        coveringMap.set(l.coveredByDate, list);
+      }
+    });
 
     // Track days covered by multi-day shifts
     const startMap = new Map<string, AttendanceRecord>();
@@ -122,7 +141,8 @@ export class AttendanceComponent implements OnInit {
         record: recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr),
         isStart: startMap.has(dateStr),
         isEnd: endMap.has(dateStr),
-        isContinuation: spanMap.has(dateStr)
+        isContinuation: spanMap.has(dateStr),
+        coveringFor: coveringMap.get(dateStr)
       });
     }
 
@@ -138,7 +158,8 @@ export class AttendanceComponent implements OnInit {
         isStart: startMap.has(dateStr),
         isEnd: endMap.has(dateStr),
         isContinuation: spanMap.has(dateStr),
-        leave: leaveMap.get(dateStr)
+        leave: leaveMap.get(dateStr),
+        coveringFor: coveringMap.get(dateStr)
       });
     }
 
@@ -155,7 +176,8 @@ export class AttendanceComponent implements OnInit {
         record: recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr),
         isStart: startMap.has(dateStr),
         isEnd: endMap.has(dateStr),
-        isContinuation: spanMap.has(dateStr)
+        isContinuation: spanMap.has(dateStr),
+        coveringFor: coveringMap.get(dateStr)
       });
     }
 
@@ -193,6 +215,48 @@ export class AttendanceComponent implements OnInit {
     this.editCheckOutDate = day.record?.checkOutDate ?? day.date;
     this.editShiftType = (day.record?.shiftType as ShiftType) ?? 'normal';
     this.editNotes = day.record?.notes ?? '';
+
+    // Initialize editStatus
+    if (day.coveringFor && day.coveringFor.length > 0) {
+      this.editStatus = 'covering';
+    } else if (day.record?.status) {
+      this.editStatus = day.record.status as any;
+    } else if (day.leave) {
+      this.editStatus = 'leave';
+    } else {
+      this.editStatus = 'present';
+    }
+
+    // Initialize leave details
+    if (day.leave) {
+      this.editLeaveType = day.leave.type || 'full';
+      this.editLeaveReason = day.leave.reason || '';
+      this.editLeaveIsCovered = day.leave.isCovered || false;
+      this.editLeaveCoveredByDate = day.leave.coveredByDate || day.date;
+      this.editLeaveCoveredHours = day.leave.coveredHours ?? (day.leave.type === 'full' ? 8 : 4);
+    } else if (day.record?.status === 'leave') {
+      this.editLeaveType = 'full';
+      this.editLeaveReason = day.record.notes || 'Medical/Casual Leave';
+      this.editLeaveIsCovered = false;
+      this.editLeaveCoveredByDate = day.date;
+      this.editLeaveCoveredHours = 8;
+    } else {
+      this.editLeaveType = 'full';
+      this.editLeaveReason = '';
+      this.editLeaveIsCovered = false;
+      this.editLeaveCoveredByDate = day.date;
+      this.editLeaveCoveredHours = 8;
+    }
+
+    // Initialize covering day details
+    this.activeCoveringLeaves = day.coveringFor || [];
+    if (this.activeCoveringLeaves.length > 0) {
+      const active = this.activeCoveringLeaves[0];
+      this.editCoveringHoursValue = active.coveredHours ?? (active.type === 'full' ? 8 : 4);
+    } else {
+      this.editCoveringHoursValue = 8;
+    }
+
     this.saveMsg.set('');
     this.saveError.set('');
     this.showModal.set(true);
@@ -208,44 +272,119 @@ export class AttendanceComponent implements OnInit {
     const day = this.selectedDay();
     if (!uid || !day) return;
 
-    if (!this.editCheckIn) {
-      this.saveError.set('Check-in time is required.');
-      return;
-    }
-    if (this.editCheckOut && this.editCheckIn) {
-      const checkInDate = this.editShiftType === '24h' ? (this.editCheckInDate || day.date) : day.date;
-      const checkOutDate = this.editShiftType === '24h' ? (this.editCheckOutDate || day.date) : day.date;
-      
-      const startDateTime = new Date(`${checkInDate}T${this.editCheckIn}`);
-      const endDateTime = new Date(`${checkOutDate}T${this.editCheckOut}`);
-      
-      if (endDateTime <= startDateTime) {
-        this.saveError.set('Check-out must be after Check-in.');
-        return;
-      }
-    }
-
     this.isSaving.set(true);
     this.saveError.set('');
-    try {
-      // Use selected checkout date for 24h shifts, or default to current date
-      let checkOutDate = this.editCheckOutDate || day.date;
+    this.saveMsg.set('');
 
-      if (this.editShiftType === 'normal') {
-        checkOutDate = day.date; // Normal shifts are same day
+    try {
+      if (this.editLeaveIsCovered && !this.editLeaveCoveredByDate) {
+        this.saveError.set('Covering date is required.');
+        this.isSaving.set(false);
+        return;
       }
 
-      const record: AttendanceRecord = {
-        date: day.date,
-        checkInDate: this.editShiftType === '24h' ? (this.editCheckInDate || day.date) : day.date,
-        checkIn: this.editCheckIn || '',
-        checkOutDate: this.editShiftType === '24h' ? (this.editCheckOutDate || day.date) : day.date,
-        checkOut: this.editCheckOut || '',
-        shiftType: this.editShiftType || 'normal',
-        status: this.editCheckIn ? 'present' : 'absent',
-        notes: this.editNotes || '',
-      };
-      await this.attendanceSvc.saveAttendance(uid, record);
+      // Save primary attendance record
+      if (this.editStatus === 'present' || this.editStatus === 'covering') {
+        if (!this.editCheckIn) {
+          this.saveError.set('Check-in time is required.');
+          this.isSaving.set(false);
+          return;
+        }
+        if (this.editCheckOut && this.editCheckIn) {
+          const checkInDate = this.editShiftType === '24h' ? (this.editCheckInDate || day.date) : day.date;
+          const checkOutDate = this.editShiftType === '24h' ? (this.editCheckOutDate || day.date) : day.date;
+          
+          const startDateTime = new Date(`${checkInDate}T${this.editCheckIn}`);
+          const endDateTime = new Date(`${checkOutDate}T${this.editCheckOut}`);
+          
+          if (endDateTime <= startDateTime) {
+            this.saveError.set('Check-out must be after Check-in.');
+            this.isSaving.set(false);
+            return;
+          }
+        }
+
+        const record: AttendanceRecord = {
+          date: day.date,
+          checkInDate: this.editShiftType === '24h' ? (this.editCheckInDate || day.date) : day.date,
+          checkIn: this.editCheckIn || '',
+          checkOutDate: this.editShiftType === '24h' ? (this.editCheckOutDate || day.date) : day.date,
+          checkOut: this.editCheckOut || '',
+          shiftType: this.editShiftType || 'normal',
+          status: 'present',
+          notes: this.editNotes || '',
+        };
+        await this.attendanceSvc.saveAttendance(uid, record);
+      } 
+      else if (this.editStatus === 'leave') {
+        if (!this.editLeaveReason) {
+          this.saveError.set('Leave reason is required.');
+          this.isSaving.set(false);
+          return;
+        }
+
+        const record: AttendanceRecord = {
+          date: day.date,
+          status: 'leave',
+          notes: this.editLeaveReason || 'Medical/Casual Leave'
+        };
+        await this.attendanceSvc.saveAttendance(uid, record);
+      } 
+      else if (this.editStatus === 'holiday') {
+        const record: AttendanceRecord = {
+          date: day.date,
+          status: 'holiday',
+          notes: this.editNotes || 'Public Holiday'
+        };
+        await this.attendanceSvc.saveAttendance(uid, record);
+      } 
+      else if (this.editStatus === 'weekend') {
+        const record: AttendanceRecord = {
+          date: day.date,
+          status: 'weekend',
+          notes: this.editNotes || 'Sunday'
+        };
+        await this.attendanceSvc.saveAttendance(uid, record);
+      }
+
+      // Handle leave/coverage record
+      if (day.leave) {
+        await this.leaveSvc.deleteLeave(uid, day.leave.leaveId);
+      }
+
+      if (this.editLeaveIsCovered || this.editStatus === 'leave') {
+        let reason = '';
+        if (this.editStatus === 'leave') {
+          reason = this.editLeaveReason || 'Medical/Casual Leave';
+        } else if (this.editStatus === 'holiday') {
+          reason = this.editNotes || 'Public Holiday Coverage';
+        } else if (this.editStatus === 'weekend') {
+          reason = this.editNotes || 'Weekend / Sunday Coverage';
+        } else {
+          reason = this.editNotes || 'Present Day Coverage';
+        }
+
+        const leaveData: any = {
+          date: day.date,
+          type: this.editLeaveType,
+          reason: reason
+        };
+
+        if (this.editLeaveIsCovered) {
+          leaveData.isCovered = true;
+          leaveData.coveredByDate = this.editLeaveCoveredByDate;
+          leaveData.coveredHours = this.editLeaveCoveredHours;
+        }
+
+        await this.leaveSvc.applyLeave(uid, leaveData);
+      }
+
+      // If this day covers another day's leave, update the covered hours in the leave record
+      if (this.activeCoveringLeaves.length > 0) {
+        const leaveToUpdate = this.activeCoveringLeaves[0];
+        await this.leaveSvc.updateLeaveCoveredHours(uid, leaveToUpdate.leaveId, this.editCoveringHoursValue);
+      }
+
       this.saveMsg.set('Entry saved successfully.');
       await this.loadMonth();
       setTimeout(() => this.closeModal(), 800);
@@ -256,26 +395,9 @@ export class AttendanceComponent implements OnInit {
     }
   }
 
-  async markAsHoliday() {
-    const uid = this.auth.currentUser()?.uid;
-    const day = this.selectedDay();
-    if (!uid || !day) return;
-
-    this.isSaving.set(true);
-    try {
-      const record: any = {
-        date: day.date,
-        status: 'holiday',
-        notes: 'Public Holiday'
-      };
-      await this.attendanceSvc.saveAttendance(uid, record);
-      await this.loadMonth();
-      this.closeModal();
-    } catch (e: any) {
-      this.saveError.set(e.message);
-    } finally {
-      this.isSaving.set(false);
-    }
+  markAsHoliday() {
+    this.editStatus = 'holiday';
+    this.onStatusChange();
   }
 
   onShiftTypeChange() {
@@ -289,55 +411,26 @@ export class AttendanceComponent implements OnInit {
     }
   }
 
-  async markAsSunday() {
-    const uid = this.auth.currentUser()?.uid;
-    const day = this.selectedDay();
-    if (!uid || !day) return;
-
-    this.isSaving.set(true);
-    try {
-      const record: any = {
-        date: day.date,
-        status: 'weekend',
-        notes: 'Sunday'
-      };
-      await this.attendanceSvc.saveAttendance(uid, record);
-      await this.loadMonth();
-      this.closeModal();
-    } catch (e: any) {
-      this.saveError.set(e.message);
-    } finally {
-      this.isSaving.set(false);
-    }
+  markAsSunday() {
+    this.editStatus = 'weekend';
+    this.onStatusChange();
   }
 
-  async markAsLeave() {
-    const uid = this.auth.currentUser()?.uid;
-    const day = this.selectedDay();
-    if (!uid || !day) return;
+  markAsLeave() {
+    this.editStatus = 'leave';
+    this.onStatusChange();
+  }
 
-    this.isSaving.set(true);
-    try {
-      const record: any = {
-        date: day.date,
-        status: 'leave',
-        notes: 'Medical/Casual Leave'
-      };
-      // Save attendance record
-      await this.attendanceSvc.saveAttendance(uid, record);
-      // Also apply formal leave
-      await this.leaveSvc.applyLeave(uid, {
-        date: day.date,
-        type: 'full',
-        reason: 'Marked from Calendar'
-      });
-
-      await this.loadMonth();
-      this.closeModal();
-    } catch (e: any) {
-      this.saveError.set(e.message);
-    } finally {
-      this.isSaving.set(false);
+  onStatusChange() {
+    if (this.editStatus === 'holiday' && !this.editNotes) {
+      this.editNotes = 'Public Holiday';
+    } else if (this.editStatus === 'weekend' && !this.editNotes) {
+      this.editNotes = 'Sunday';
+    } else if (this.editStatus === 'leave') {
+      if (!this.editLeaveReason) this.editLeaveReason = 'Medical/Casual Leave';
+      if (!this.editLeaveCoveredByDate && this.selectedDay()) {
+        this.editLeaveCoveredByDate = this.selectedDay()!.date;
+      }
     }
   }
 
@@ -349,7 +442,27 @@ export class AttendanceComponent implements OnInit {
     if (day.dayOfWeek === 6) classes.push('saturday');
     if (day.record?.checkIn && !day.record?.checkOut) classes.push('missing-checkout');
     if (day.record?.checkIn && day.record?.checkOut) classes.push('completed');
-    if (day.record?.status === 'leave' || day.leave) classes.push('on-leave');
+    if (day.record?.status === 'leave' || day.leave) {
+      classes.push('on-leave');
+      if (day.leave?.isCovered) {
+        const reqHours = day.leave.type === 'full' ? 8 : 4;
+        const covHours = day.leave.coveredHours ?? 0;
+        if (covHours < reqHours) {
+          classes.push('on-leave-partially-covered');
+        } else {
+          classes.push('on-leave-covered');
+        }
+      }
+    }
+    if (day.coveringFor && day.coveringFor.length > 0) {
+      classes.push('is-covering-day');
+      const active = day.coveringFor[0];
+      const reqHours = active.type === 'full' ? 8 : 4;
+      const covHours = active.coveredHours ?? 0;
+      if (covHours < reqHours) {
+        classes.push('is-covering-day-incomplete');
+      }
+    }
     return classes.join(' ');
   }
 

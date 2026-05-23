@@ -52,6 +52,9 @@ export interface LeaveRecord {
   status: 'pending' | 'approved' | 'rejected';
   appliedAt: string;
   approvedBy?: string;
+  isCovered?: boolean;
+  coveredByDate?: string;
+  coveredHours?: number;
 }
 
 export interface MonthlySummary {

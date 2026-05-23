@@ -31,6 +31,7 @@
               <th>Date</th>
               <th>Type</th>
               <th>Reason</th>
+              <th>Covering Date</th>
               <th>Applied On</th>
               <th>Status</th>
               <th class="actions-col">Actions</th>
@@ -46,6 +47,7 @@
                   </span>
                 </td>
                 <td class="reason-cell">{{ leave.reason }}</td>
+                <td>{{ leave.isCovered ? leave.coveredByDate : '—' }}</td>
                 <td class="applied-cell">{{ leave.appliedAt | date:'mediumDate' }}</td>
                 <td>
                   <span class="badge badge-success">Recorded</span>
@@ -97,6 +99,18 @@
             <label>Reason</label>
             <textarea [(ngModel)]="leaveReason" placeholder="Explain the reason for leave..." class="input-field textarea" id="leave-reason"></textarea>
           </div>
+
+          <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 1.25rem;">
+            <input type="checkbox" [(ngModel)]="isCovered" id="leave-is-covered" style="width: auto;">
+            <label for="leave-is-covered" style="margin-bottom: 0;">Covered on another day</label>
+          </div>
+
+          @if (isCovered) {
+            <div class="form-group">
+              <label>Covering Date</label>
+              <input type="date" [(ngModel)]="coveredByDate" class="input-field" id="leave-covering-date">
+            </div>
+          }
         </div>
 
         <div class="modal-footer">
