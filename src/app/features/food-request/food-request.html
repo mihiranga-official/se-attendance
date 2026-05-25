@@ -265,7 +265,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (req of foodRequests(); track req.id) {
+            @for (req of filteredFoodRequests(); track req.id) {
               <tr class="table-row">
                 <td><span class="request-id-badge">{{ req.id }}</span></td>
                 <td class="text-secondary-label">{{ req.formattedDateTime || req.dateTime }}</td>

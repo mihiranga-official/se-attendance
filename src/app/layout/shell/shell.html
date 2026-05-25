@@ -213,23 +213,36 @@
   <!-- Inactivity Modal -->
   @if (inactivity.showWarning()) {
   <div class="modal-backdrop z-max">
-    <div class="modal-card bounce-in">
-      <div class="modal-header">
-        <h3>Are you still there?</h3>
-      </div>
+    <div class="modal-card security-alert bounce-in">
       <div class="modal-body text-center">
-        <div class="warning-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="64" height="64">
-            <path
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-          </svg>
+        <!-- Visual status ring representing security timeout -->
+        <div class="status-indicator-ring">
+          <div class="inner-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
         </div>
-        <p>You have been inactive for 15 minutes. For your security, we are going to log you out shortly.</p>
-        <p class="timer-msg">Would you like to stay logged in?</p>
+
+        <h3 class="modal-title-security">Session Expiring</h3>
+        <p class="modal-desc-security">You have been inactive for 15 minutes. To protect your data, you will be signed out automatically.</p>
+        
+        <!-- Premium Countdown Circle / Badge -->
+        <div class="countdown-badge-wrapper">
+          <span class="countdown-label">Automatic Logout In</span>
+          <span class="countdown-number">{{ inactivity.countdown() }}s</span>
+        </div>
       </div>
-      <div class="modal-footer flex-center">
-        <button class="btn-danger" (click)="logout()">No, Logout</button>
-        <button class="btn-primary" (click)="inactivity.stayLoggedIn()">Yes, Stay Logged In</button>
+      <div class="modal-footer flex-center" style="gap: 12px;">
+        <button class="btn-secondary" (click)="logout()">Sign Out</button>
+        <button class="btn-primary btn-keep-session" (click)="inactivity.stayLoggedIn()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" style="margin-right: 4px; vertical-align: middle;">
+            <path d="M20 6L9 17l-5-5"></path>
+          </svg>
+          Keep Session Active
+        </button>
       </div>
     </div>
   </div>

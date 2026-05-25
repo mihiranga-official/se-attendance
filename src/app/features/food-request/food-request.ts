@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
@@ -33,8 +33,8 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
     'Janith Gunawardana',
     'Hirun Prabodhya',
     'Udesh Wickramanayake ',
-    'Thilina',
-    'Helitha'
+    'Thilina welideniya',
+    'Helitha Winsuka'
   ];
 
 
@@ -43,6 +43,13 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
   successMsg = signal('');
   errorMsg = signal('');
   foodRequests = signal<any[]>([]);
+  filteredFoodRequests = computed(() => {
+    const profile = this.auth.userProfile();
+    const userName = profile?.name ? profile.name.trim().toLowerCase() : '';
+    return this.foodRequests().filter((req: any) => 
+      req.name && req.name.trim().toLowerCase() === userName
+    );
+  });
 
   // Division Options
   divisions = [
@@ -153,18 +160,8 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
   }
 
   get lastOrder(): any {
-    const userName = this.auth.userProfile()?.name;
-    if (!userName) return null;
-    const trimmedUser = userName.trim();
-
-    const requests = this.foodRequests();
-    // Search from index 0 since list is sorted newest first
-    for (let i = 0; i < requests.length; i++) {
-      if (requests[i].name && requests[i].name.trim() === trimmedUser) {
-        return requests[i];
-      }
-    }
-    return null;
+    const requests = this.filteredFoodRequests();
+    return requests.length > 0 ? requests[0] : null;
   }
 
   repeatOrder(req: any) {

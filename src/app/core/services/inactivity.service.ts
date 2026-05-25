@@ -11,7 +11,9 @@ export class InactivityService {
   private readonly WARNING_MS = 30 * 1000; // 30 seconds to respond
   
   showWarning = signal(false);
+  countdown = signal(30);
   private stop$ = new Subject<void>();
+  private countdownInterval: any = null;
 
   startTracking() {
     this.stop$.next(); // Reset if already running
@@ -37,6 +39,10 @@ export class InactivityService {
   stopTracking() {
     this.stop$.next();
     this.showWarning.set(false);
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
   }
 
   private resetTimer() {
@@ -51,18 +57,32 @@ export class InactivityService {
   }
 
   private onTimeoutReached() {
+    this.countdown.set(30);
     this.showWarning.set(true);
     
-    // Start warning timer
-    timer(this.WARNING_MS).pipe(takeUntil(this.stop$)).subscribe(() => {
-      if (this.showWarning()) {
-        this.stopTracking();
-        this.auth.logout();
-      }
+    this.ngZone.run(() => {
+      if (this.countdownInterval) clearInterval(this.countdownInterval);
+      this.countdownInterval = setInterval(() => {
+        this.ngZone.run(() => {
+          const val = this.countdown();
+          if (val > 1) {
+            this.countdown.set(val - 1);
+          } else {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+            this.stopTracking();
+            this.auth.logout();
+          }
+        });
+      }, 1000);
     });
   }
 
   stayLoggedIn() {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
     this.resetTimer();
   }
 }
