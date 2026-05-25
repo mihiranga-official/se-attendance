@@ -229,32 +229,15 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Action B: Silent Google Form Background Automation (Using sendBeacon to avoid CORS console errors)
+    // Action B: Open pre-filled Google Form in a new tab (Required to capture employee Workspace email address & bypass SameSite restrictions)
     try {
-      const url = 'https://docs.google.com/forms/d/e/1FAIpQLSdoPrpw7Ybg5jujOEtAqcTCyTU2z7VRBdxeWoi6BTwLbnm7dg/formResponse?pli=1';
-      const params = new URLSearchParams();
-      params.append('entry.1711473520', payload.name);
-      params.append('entry.1809901273', payload.division);
-      params.append('entry.1524728558', payload.lunchCategory);
-      params.append('fvv', '1');
-      params.append('pageHistory', '0');
-      params.append('fbzx', '88055061906163486');
-
-      const blob = new Blob([params.toString()], { type: 'application/x-www-form-urlencoded' });
-      const sent = navigator.sendBeacon(url, blob);
-      if (sent) {
-        console.log('Background Google Form submission dispatched silently via sendBeacon.');
-      } else {
-        console.warn('sendBeacon failed to queue request, falling back to fetch in no-cors mode.');
-        fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: params.toString()
-        }).catch(err => console.error('Silent fetch fallback failed:', err));
-      }
+      const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdoPrpw7Ybg5jujOEtAqcTCyTU2z7VRBdxeWoi6BTwLbnm7dg/viewform';
+      const prefilledUrl = `${baseUrl}?entry.1711473520=${encodeURIComponent(payload.name)}&entry.1809901273=${encodeURIComponent(payload.division)}&entry.1524728558=${encodeURIComponent(payload.lunchCategory)}`;
+      
+      console.log('Opening pre-filled Google Form in a new tab:', prefilledUrl);
+      window.open(prefilledUrl, '_blank');
     } catch (e: any) {
-      console.error('Silent Google Form submission error:', e);
+      console.error('Failed to open pre-filled Google Form:', e);
     }
 
   }
