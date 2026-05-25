@@ -234,4 +234,22 @@
     </div>
   </div>
   }
+
+  <!-- Custom Dialog Modal -->
+  @if (dialogService.show()) {
+  <div class="modal-backdrop z-max">
+    <div class="modal-card bounce-in">
+      <div class="modal-header">
+        <h3>{{ dialogService.title() }}</h3>
+      </div>
+      <div class="modal-body text-center">
+        <p>{{ dialogService.message() }}</p>
+      </div>
+      <div class="modal-footer flex-center" style="gap: 16px;">
+        <button class="btn-danger" (click)="dialogService.submit(false)">No</button>
+        <button class="btn-primary" (click)="dialogService.submit(true)">Yes</button>
+      </div>
+    </div>
+  </div>
+  }
 </div>

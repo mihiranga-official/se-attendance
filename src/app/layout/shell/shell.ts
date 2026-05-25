@@ -4,6 +4,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { InactivityService } from '../../core/services/inactivity.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { LunchAlertService } from '../../core/services/lunch-alert.service';
+import { CustomDialogService } from '../../core/services/custom-dialog.service';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -18,6 +19,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   inactivity = inject(InactivityService);
   theme = inject(ThemeService);
   lunchAlert = inject(LunchAlertService);
+  dialogService = inject(CustomDialogService);
   private router = inject(Router);
   
   sidebarOpen = signal(false);

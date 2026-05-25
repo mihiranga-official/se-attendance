@@ -30,7 +30,7 @@ export class AttendanceService {
     return 'weekday';
   }
 
-  calculateHoursAndStatus(record: Partial<AttendanceRecord>): void {
+  calculateHoursAndStatus(record: Partial<AttendanceRecord>, weeklyOT: number = 0): void {
     if (!record.checkIn) {
       record.actualStatus = 'Incomplete';
       return;
@@ -143,6 +143,11 @@ export class AttendanceService {
     });
     if (day1Eligible) record.bonusDaysEarned++;
 
+    if (dayType === 'saturday' && weeklyOT >= 5) {
+      record.actualStatus = 'Saturday Covered';
+      record.status = 'Saturday Covered';
+    }
+
     // Day 2 Logic (Overnight)
     if (record.is24HourShift && checkInDate !== checkOutDate) {
       const outDateObj = new Date(checkOutDate);
@@ -161,9 +166,42 @@ export class AttendanceService {
     record.lostBonus = record.bonusDaysEarned === 0;
   }
 
+  async getWeeklyOT(uid: string, dateStr: string): Promise<number> {
+    const date = new Date(dateStr);
+    const day = date.getDay();
+    if (day === 0) return 0;
+    
+    const monday = new Date(date);
+    monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
+    
+    let totalOT = 0;
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (dStr >= dateStr) break;
+      try {
+        const snap = await get(ref(database, `attendance/${uid}/${dStr}`));
+        if (snap.exists()) {
+          const rec = snap.val() as AttendanceRecord;
+          if (rec.otHours) totalOT += rec.otHours;
+        }
+      } catch (err) {
+        console.warn('Firebase read failed for OT, using localStorage fallback');
+        const cachedStr = localStorage.getItem(`attendance_${uid}_${dStr}`);
+        if (cachedStr) {
+          const rec = JSON.parse(cachedStr) as AttendanceRecord;
+          if (rec.otHours) totalOT += rec.otHours;
+        }
+      }
+    }
+    return totalOT;
+  }
+
   async saveAttendance(uid: string, record: AttendanceRecord): Promise<void> {
     const path = `attendance/${uid}/${record.date}`;
-    this.calculateHoursAndStatus(record);
+    const weeklyOT = record.date ? await this.getWeeklyOT(uid, record.date) : 0;
+    this.calculateHoursAndStatus(record, weeklyOT);
     await set(ref(database, path), record);
   }
 
@@ -173,7 +211,8 @@ export class AttendanceService {
     if (snap.exists()) {
       const existing = snap.val() as AttendanceRecord;
       const merged = { ...existing, ...changes };
-      this.calculateHoursAndStatus(merged);
+      const weeklyOT = await this.getWeeklyOT(uid, date);
+      this.calculateHoursAndStatus(merged, weeklyOT);
       await update(ref(database, path), merged);
     }
   }
@@ -264,10 +303,27 @@ export class AttendanceService {
 
   saveFoodRequest(payload: { name: string; division: string; lunchCategory: string }): Observable<any> {
     const id = `FR-${Date.now()}`;
-    const dateTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const now = new Date();
+    const dateTime = now.toISOString();
+    
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[now.getMonth()];
+    const day = now.getDate();
+    const year = now.getFullYear();
+    
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, '0');
+    
+    const formattedDateTime = `${month} ${day}, ${year}, ${hoursStr}:${minutes} ${ampm}`;
+
     const newRequest = {
       id,
       dateTime,
+      formattedDateTime,
       ...payload
     };
     const savePromise = set(ref(database, `foodRequests/${id}`), newRequest)
@@ -281,6 +337,10 @@ export class AttendanceService {
         return newRequest;
       });
     return from(savePromise);
+  }
+
+  saveLocalFoodRequest(payload: { name: string; division: string; lunchCategory: string }): Observable<any> {
+    return this.saveFoodRequest(payload);
   }
 
   getFoodRequests(): Observable<any[]> {
@@ -302,6 +362,10 @@ export class AttendanceService {
     return from(fetchPromise);
   }
 
+  getLocalRequests(): Observable<any[]> {
+    return this.getFoodRequests();
+  }
+
   private saveToLocalStorage(newRequest: any) {
     try {
       const list = this.getFromLocalStorage();
@@ -315,7 +379,11 @@ export class AttendanceService {
   private getFromLocalStorage(): any[] {
     try {
       const data = localStorage.getItem('localFoodRequests');
-      return data ? JSON.parse(data) : [];
+      const list = data ? JSON.parse(data) : [];
+      if (Array.isArray(list)) {
+        return list.sort((a: any, b: any) => b.dateTime.localeCompare(a.dateTime));
+      }
+      return [];
     } catch (e) {
       return [];
     }

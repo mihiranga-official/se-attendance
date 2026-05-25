@@ -68,6 +68,20 @@ export class DashboardComponent implements OnInit {
   get isSunday(): boolean { return this.today.getDay() === 0; }
   get isSaturday(): boolean { return this.today.getDay() === 6; }
 
+  get remainingLeaveHours(): number {
+    const summary = this.monthlySummary();
+    if (!summary) return 0;
+    const unpaid = summary.unpaidLeaveHours || 0;
+    const ot = summary.totalOTHours || 0;
+    return parseFloat(Math.max(0, unpaid - ot).toFixed(2));
+  }
+
+  get isMonthEndingSoon(): boolean {
+    const lastDay = new Date(this.today.getFullYear(), this.today.getMonth() + 1, 0);
+    const diffDays = lastDay.getDate() - this.today.getDate();
+    return diffDays <= 3 && diffDays >= 0;
+  }
+
   calculateLists(recent: AttendanceRecord[], leaves: any[]) {
     const present = recent
       .filter(r => r.checkIn)
@@ -260,5 +274,24 @@ export class DashboardComponent implements OnInit {
 
   formatDate(dateStr: string): string {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+  }
+
+  formatCheckOut(dateStr: string, timeStr?: string): string {
+    if (!timeStr) return '—';
+    const day = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+    const [h, m] = timeStr.split(':');
+    const d = new Date();
+    d.setHours(Number(h), Number(m));
+    const timeFormatted = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return `${day}, ${timeFormatted}`;
+  }
+
+  antigravityClicks = 0;
+  toggleAntigravity() {
+    this.antigravityClicks++;
+    if (this.antigravityClicks >= 3) {
+      document.body.classList.toggle('antigravity-theme');
+      this.antigravityClicks = 0;
+    }
   }
 }

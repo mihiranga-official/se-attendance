@@ -97,6 +97,25 @@
           }
         </div>
         }
+
+        @if (remainingLeaveHours > 0 && remainingLeaveHours >= 9) {
+        <div class="analytics-card warning-card" style="margin-top: 1rem; border-radius: 12px; padding: 1rem; max-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+          <div class="card-icon" style="margin-bottom: 0.5rem; color: #f59e0b;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+          </div>
+          <div class="card-content">
+            <h4 class="card-title" style="font-size: 0.95rem; margin-bottom: 4px; color: #f59e0b;">Performance Analytics Alert</h4>
+            <p class="card-desc" style="font-size: 0.8rem; margin-bottom: 6px; opacity: 0.9;">You have <strong>{{ remainingLeaveHours }} hours</strong> ({{ remainingLeaveHours / 9 | number:'1.1-1' }} days) of uncleared leave.</p>
+            @if (isMonthEndingSoon) {
+              <div class="urgent-banner" style="font-size: 0.75rem; padding: 6px 10px; background: rgba(239,68,68,0.2); color: #fca5a5; border-radius: 6px;">
+                <strong>Warning:</strong> Month ending soon! Cover leaves to avoid deductions.
+              </div>
+            }
+          </div>
+        </div>
+        }
       </div>
     </div>
 
@@ -107,6 +126,7 @@
     <div class="action-msg error">{{ actionError() }}</div>
     }
   </div>
+
 
   <!-- Main Content Grid -->
   <div class="dashboard-main-grid">
@@ -240,7 +260,7 @@
 
   <!-- Recent Activity -->
   <div class="section-card">
-    <h2 class="section-title">Recent Activity</h2>
+    <h2 class="section-title" (click)="toggleAntigravity()" style="cursor: pointer; user-select: none;">Recent Activity</h2>
     @if (recentRecords().length === 0) {
     <div class="empty-state">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
@@ -268,7 +288,7 @@
             <td class="date-cell">{{ formatDate(rec.date) }}</td>
             <td>{{ rec.checkIn ?? '—' }}</td>
             <td>
-              {{ rec.checkOut ?? '—' }}
+              {{ formatCheckOut(rec.date, rec.checkOut) }}
               @if (rec.checkIn && !rec.checkOut) {
               <span class="missing-badge">Missing</span>
               }
@@ -289,4 +309,3 @@
     </div>
     }
   </div>
-</div>

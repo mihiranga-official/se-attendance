@@ -38,12 +38,19 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<void> {
-    const cleanEmail = email.trim();
+    let cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
-    // console.log('Login attempt:', { cleanEmail, cleanPassword });
+
+    // TEMPORARY ALIAS SPOOFING: Allow login using the new emails before migration completes
+    let originalAttemptEmail = cleanEmail;
+    if (cleanEmail === 'udeshinnovex@gmail.com') {
+      cleanEmail = 'udesh@gmail.com';
+    } else if (cleanEmail === 'mihiranga.office@gmail.com') {
+      cleanEmail = 'mihiranga.officesl@gmail.com';
+    }
 
     // Hardcoded Master Logins (DA/DA or admin/admin)
-    if ((cleanEmail === 'DA' && cleanPassword === 'DA') || (cleanEmail === 'admin' && cleanPassword === 'admin')) {
+    if ((cleanEmail === 'da' && cleanPassword === 'DA') || (cleanEmail === 'admin' && cleanPassword === 'admin')) {
       console.log('Hardcoded master login detected!');
       const { signInAnonymously } = await import('firebase/auth');
       const cred = await signInAnonymously(auth);
@@ -91,6 +98,29 @@ export class AuthService {
     }
 
     const cred = await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+    
+    // --- ONE-TIME FIREBASE SIDE EMAIL MIGRATION ---
+    if (cleanEmail === 'udesh@gmail.com' && originalAttemptEmail === 'udeshinnovex@gmail.com') {
+      try {
+        const { verifyBeforeUpdateEmail } = await import('firebase/auth');
+        await verifyBeforeUpdateEmail(cred.user, 'udeshinnovex@gmail.com');
+        await update(ref(database, `users/${cred.user.uid}`), { email: 'udeshinnovex@gmail.com' });
+        console.log('Verification email sent to udeshinnovex@gmail.com');
+      } catch (err) {
+        console.error('Firebase Auth Migration failed for Udesh', err);
+      }
+    } else if (cleanEmail === 'mihiranga.officesl@gmail.com' && originalAttemptEmail === 'mihiranga.office@gmail.com') {
+      try {
+        const { verifyBeforeUpdateEmail } = await import('firebase/auth');
+        await verifyBeforeUpdateEmail(cred.user, 'mihiranga.office@gmail.com');
+        await update(ref(database, `users/${cred.user.uid}`), { email: 'mihiranga.office@gmail.com' });
+        console.log('Verification email sent to mihiranga.office@gmail.com');
+      } catch (err) {
+        console.error('Firebase Auth Migration failed for Mihiranga', err);
+      }
+    }
+    // ----------------------------------------------
+
     await this.loadUserProfile(cred.user.uid);
     const profile = this.userProfile();
     

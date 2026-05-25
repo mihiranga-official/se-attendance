@@ -1,23 +1,27 @@
 import { Injectable, inject, NgZone, effect } from '@angular/core';
 import { AuthService } from './auth.service';
 import { Router } from '@angular/router';
-import { interval, Subscription } from 'rxjs';
-
-export const LUNCH_ORDER_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdoPrpw7Ybg5jujOEtAqcTCyTU2z7VRBdxeWoi6BTwLbnm7dg/viewform?pli=1&pli=1&fbzx=4917293566024464660';
+import { interval, Subscription, firstValueFrom } from 'rxjs';
+import { CustomDialogService } from './custom-dialog.service';
+import { AttendanceService } from './attendance.service';
 
 @Injectable({ providedIn: 'root' })
 export class LunchAlertService {
   private auth = inject(AuthService);
   private ngZone = inject(NgZone);
   private router = inject(Router);
+  private dialog = inject(CustomDialogService);
+  private attendanceSvc = inject(AttendanceService);
   private timerSub?: Subscription;
 
   constructor() {
-    // Run alert check immediately when both auth user and profile resolve
     effect(() => {
       const user = this.auth.currentUser();
       const profile = this.auth.userProfile();
       if (user && profile) {
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+          Notification.requestPermission();
+        }
         this.checkLunchAlert();
       }
     });
@@ -25,8 +29,6 @@ export class LunchAlertService {
 
   startTracking() {
     this.stopTracking();
-    
-    // Check immediately, then every 1 minute
     this.checkLunchAlert();
     this.ngZone.runOutsideAngular(() => {
       this.timerSub = interval(60000).subscribe(() => {
@@ -44,50 +46,57 @@ export class LunchAlertService {
     }
   }
 
-  private checkLunchAlert() {
+  private async checkLunchAlert() {
+    if (this.dialog.show()) return; // Don't trigger if a dialog is already open
+
     const user = this.auth.currentUser();
     if (!user) return;
     
     const profile = this.auth.userProfile();
-    // Suppress for admin users or if profile isn't loaded yet
     if (!profile || profile.role === 'admin') return;
 
     const uid = user.uid;
     const now = new Date();
-    const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    // Monday to Saturday are 1 to 6
-    if (day === 0) return; // Ignore Sunday
+    const day = now.getDay();
+    if (day === 0) return;
 
     const hours = now.getHours();
-    // Must be between 6:00 AM and 9:00 AM (6:00 to 8:59)
-    if (hours < 6 || hours >= 9) return;
+    const minutes = now.getMinutes();
+    
+    // Window is strictly 7:30 AM to 8:59 AM
+    if (hours < 7 || hours >= 9) return;
+    if (hours === 7 && minutes < 30) return;
 
     const todayStr = now.toISOString().split('T')[0];
     const orderedKey = `lunch_ordered_${uid}`;
-    const lastCheckKey = `lunch_last_check_${uid}`;
-
-    // If already ordered today, suppress
+    
     if (localStorage.getItem(orderedKey) === todayStr) {
       return;
     }
 
-    // Check throttle (15 minutes = 15 * 60 * 1000 = 900000 ms)
-    const lastCheck = localStorage.getItem(lastCheckKey);
-    const nowMs = now.getTime();
-    if (lastCheck) {
-      const lastCheckMs = parseInt(lastCheck, 10);
-      if (nowMs - lastCheckMs < 15 * 60 * 1000) {
-        return;
-      }
+    const slot = Math.floor(minutes / 15);
+    const slotKey = `lunch_slot_${uid}_${todayStr}_${hours}_${slot}`;
+    if (localStorage.getItem(slotKey)) {
+      return;
     }
 
-    // Set last check timestamp
-    localStorage.setItem(lastCheckKey, nowMs.toString());
+    localStorage.setItem(slotKey, '1');
 
-    // Ask user
-    const hasOrdered = confirm(`Did you order today's (${todayStr}) lunch?`);
+    if (Notification.permission === 'granted') {
+      new Notification('Lunch Order Reminder', { body: `Did you order today's (${todayStr}) lunch?` });
+    }
+
+    const hasOrdered = await this.dialog.confirm('Lunch Order', `Did you order today's (${todayStr}) lunch?`);
     if (hasOrdered) {
-      localStorage.setItem(orderedKey, todayStr);
+      const requests = await firstValueFrom(this.attendanceSvc.getFoodRequests());
+      const ordered = requests.some(r => r.name === profile.name && r.dateTime.startsWith(todayStr));
+      
+      if (!ordered) {
+        await this.dialog.confirm('Verification Failed', 'You did not order. Routing to request page...');
+        this.router.navigate(['/food-request']);
+      } else {
+        localStorage.setItem(orderedKey, todayStr);
+      }
     } else {
       this.router.navigate(['/food-request']);
     }

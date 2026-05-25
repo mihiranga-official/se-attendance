@@ -243,11 +243,11 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Date/Time</th>
+              <th>Order ID</th>
+              <th>Date & Time</th>
               <th>Employee Name</th>
               <th>Division</th>
-              <th>Lunch Category</th>
+              <th>Lunch Option</th>
               <th style="text-align: right; padding-right: 1.5rem;">Action</th>
             </tr>
           </thead>
@@ -255,7 +255,7 @@
             @for (req of foodRequests(); track req.id) {
               <tr class="table-row">
                 <td><span class="request-id-badge">{{ req.id }}</span></td>
-                <td class="text-secondary-label">{{ req.dateTime }}</td>
+                <td class="text-secondary-label">{{ req.formattedDateTime || req.dateTime }}</td>
                 <td class="font-semibold">{{ req.name }}</td>
                 <td><span class="badge badge-info">{{ req.division }}</span></td>
                 <td><span class="badge badge-success">{{ req.lunchCategory }}</span></td>

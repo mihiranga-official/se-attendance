@@ -397,7 +397,7 @@
             <p class="no-records">No food requests logged this month.</p>
           } @else {
             <ul class="popup-list">
-              @for (item of foodRequestsList(); track item.date) {
+              @for (item of foodRequestsList(); track $index) {
                 <li class="popup-item">
                   <span class="popup-date">{{ formatDate(item.date) }}</span>
                   <span class="popup-info">{{ item.info }}</span>

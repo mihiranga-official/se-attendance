@@ -10,7 +10,7 @@ export interface UserProfile {
 }
 
 export type ShiftType = 'normal' | '24h';
-export type ActualStatus = 'Completed' | 'Incomplete' | 'Half Day' | 'Early Leave' | 'Late Arrival' | 'Overnight Shift' | '24 Hour Shift' | 'Bonus Eligible' | 'Bonus Lost';
+export type ActualStatus = 'Completed' | 'Incomplete' | 'Half Day' | 'Early Leave' | 'Late Arrival' | 'Overnight Shift' | '24 Hour Shift' | 'Bonus Eligible' | 'Bonus Lost' | 'Saturday Covered';
 
 export interface BonusDetail {
   date: string;
@@ -24,7 +24,7 @@ export interface AttendanceRecord {
   checkOut?: string;     // HH:mm (24h)
   workedHours?: number;
   otHours?: number;
-  status: 'present' | 'absent' | 'leave' | 'half-day' | 'holiday' | 'weekend';
+  status: 'present' | 'absent' | 'leave' | 'half-day' | 'holiday' | 'weekend' | 'Saturday Covered';
   notes?: string;
   isLate?: boolean;
   lateMinutes?: number;
@@ -79,6 +79,7 @@ export interface MonthlySummary {
   twentyFourHourShifts?: number;
   totalOvernightHours?: number;
   freeMealEligibleDays?: number;
+  unpaidLeaveHours?: number;
 }
 
 export interface YearlySummary {

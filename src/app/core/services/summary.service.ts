@@ -22,6 +22,7 @@ export class SummaryService {
     let absentDays = 0;
     let leaveDays = 0;
     let halfDays = 0;
+    let unpaidLeaveHours = 0;
     let totalOTHours = 0;
     let extraDays = 0;
     let lateDays = 0;
@@ -47,8 +48,8 @@ export class SummaryService {
       const leave = leaves.find(l => l.date === day);
 
       if (leave) {
-        if (leave.type === 'full') leaveDays++;
-        else { halfDays++; leaveDays += 0.5; }
+        if (leave.type === 'full') { leaveDays++; unpaidLeaveHours += 9; }
+        else { halfDays++; leaveDays += 0.5; unpaidLeaveHours += 4.5; }
         continue;
       }
 
@@ -122,7 +123,8 @@ export class SummaryService {
       bonusEligibleDays,
       twentyFourHourShifts,
       totalOvernightHours: parseFloat(totalOvernightHours.toFixed(2)),
-      freeMealEligibleDays
+      freeMealEligibleDays,
+      unpaidLeaveHours
     };
   }
 
@@ -148,7 +150,8 @@ export class SummaryService {
         bonusEligibleDays: (acc.bonusEligibleDays || 0) + (curr.bonusEligibleDays || 0),
         twentyFourHourShifts: (acc.twentyFourHourShifts || 0) + (curr.twentyFourHourShifts || 0),
         totalOvernightHours: (acc.totalOvernightHours || 0) + (curr.totalOvernightHours || 0),
-        freeMealEligibleDays: (acc.freeMealEligibleDays || 0) + (curr.freeMealEligibleDays || 0)
+        freeMealEligibleDays: (acc.freeMealEligibleDays || 0) + (curr.freeMealEligibleDays || 0),
+        unpaidLeaveHours: (acc.unpaidLeaveHours || 0) + (curr.unpaidLeaveHours || 0)
       };
     });
   }

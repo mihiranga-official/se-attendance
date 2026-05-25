@@ -110,10 +110,8 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
   }
 
   isCutoffPassed(): boolean {
-    const now = new Date();
-    const hours = now.getHours();
-    // Cutoff is passed if it's after 9:00 AM today OR before 6:00 AM (carrying over from the previous day's cutoff)
-    return hours >= 9 || hours < 6;
+    // Temporarily disabled cutoff to allow testing/late orders
+    return false;
   }
 
   loadFoodRequests() {
