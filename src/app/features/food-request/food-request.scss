@@ -608,3 +608,66 @@
     opacity: 0;
   }
 }
+
+// ── Ordering Closed Overlay ─────────────────────────────────────────────────
+.form-disabled {
+  position: relative;
+  overflow: hidden;
+
+  > *:not(.closed-overlay) {
+    filter: blur(3px);
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.4;
+  }
+}
+
+.closed-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 14, 26, 0.72);
+  backdrop-filter: blur(6px);
+  border-radius: inherit;
+}
+
+.closed-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+  padding: 2rem;
+
+  svg {
+    color: #9ca3af;
+    opacity: 0.7;
+  }
+
+  h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #e5e7eb;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    font-size: 0.95rem;
+    color: #9ca3af;
+    margin: 0;
+
+    &.window-hint {
+      margin-top: 0.25rem;
+      font-size: 0.82rem;
+      color: #6b7280;
+
+      strong {
+        color: #a78bfa;
+      }
+    }
+  }
+}
