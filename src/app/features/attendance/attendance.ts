@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { LeaveService } from '../../core/services/leave.service';
+import { HolidayService } from '../../core/services/holiday.service';
+import { CustomDialogService } from '../../core/services/custom-dialog.service';
 import { AttendanceRecord, LeaveRecord, ShiftType } from '../../core/models/user.model';
 
 interface CalendarDay {
@@ -18,6 +20,8 @@ interface CalendarDay {
   isStart?: boolean;
   isEnd?: boolean;
   coveringFor?: LeaveRecord[];
+  isPublicHoliday?: boolean;
+  holidayName?: string;
 }
 
 @Component({
@@ -31,6 +35,8 @@ export class AttendanceComponent implements OnInit {
   private auth = inject(AuthService);
   private attendanceSvc = inject(AttendanceService);
   private leaveSvc = inject(LeaveService);
+  readonly holidaySvc = inject(HolidayService);
+  private dialogSvc = inject(CustomDialogService);
 
   currentYear = signal(new Date().getFullYear());
   currentMonth = signal(new Date().getMonth() + 1);
@@ -50,9 +56,9 @@ export class AttendanceComponent implements OnInit {
   editLeaveReason = '';
   editLeaveIsCovered = false;
   editLeaveCoveredByDate = '';
-  editLeaveCoveredHours = 8;
+  editLeaveCoveredHours = 9;
   activeCoveringLeaves: LeaveRecord[] = [];
-  editCoveringHoursValue = 8;
+  editCoveringHoursValue = 9;
   isSaving = signal(false);
   saveMsg = signal('');
   saveError = signal('');
@@ -71,6 +77,7 @@ export class AttendanceComponent implements OnInit {
   async loadMonth() {
     const uid = this.auth.currentUser()?.uid;
     if (!uid) return;
+    await this.holidaySvc.ensureLoaded();
     const [recs, leaves] = await Promise.all([
       this.attendanceSvc.getAttendanceForMonth(uid, this.currentYear(), this.currentMonth()),
       this.leaveSvc.getLeavesForMonth(uid, this.currentYear(), this.currentMonth())
@@ -149,17 +156,30 @@ export class AttendanceComponent implements OnInit {
     // Current month
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const isPublicHoliday = this.holidaySvc.isHoliday(dateStr);
+      const holidayName = this.holidaySvc.getHolidayName(dateStr) ?? undefined;
+      const existingRecord = recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr);
+      // Auto-create a virtual holiday record if admin declared it a public holiday and no record exists
+      const effectiveRecord: AttendanceRecord | undefined = existingRecord ?? (isPublicHoliday ? {
+        date: dateStr,
+        status: 'holiday',
+        notes: holidayName || 'Public Holiday',
+        workedHours: 0,
+        otHours: 0
+      } : undefined);
       days.push({
         date: dateStr, day: d,
         isToday: dateStr === todayStr,
         isCurrentMonth: true,
         dayOfWeek: new Date(y, m - 1, d).getDay(),
-        record: recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr),
+        record: effectiveRecord,
         isStart: startMap.has(dateStr),
         isEnd: endMap.has(dateStr),
         isContinuation: spanMap.has(dateStr),
         leave: leaveMap.get(dateStr),
-        coveringFor: coveringMap.get(dateStr)
+        coveringFor: coveringMap.get(dateStr),
+        isPublicHoliday,
+        holidayName
       });
     }
 
@@ -233,28 +253,28 @@ export class AttendanceComponent implements OnInit {
       this.editLeaveReason = day.leave.reason || '';
       this.editLeaveIsCovered = day.leave.isCovered || false;
       this.editLeaveCoveredByDate = day.leave.coveredByDate || day.date;
-      this.editLeaveCoveredHours = day.leave.coveredHours ?? (day.leave.type === 'full' ? 8 : 4);
+      this.editLeaveCoveredHours = day.leave.coveredHours ?? (day.leave.type === 'full' ? 9 : 4.5);
     } else if (day.record?.status === 'leave') {
       this.editLeaveType = 'full';
       this.editLeaveReason = day.record.notes || 'Medical/Casual Leave';
       this.editLeaveIsCovered = false;
       this.editLeaveCoveredByDate = day.date;
-      this.editLeaveCoveredHours = 8;
+      this.editLeaveCoveredHours = 9;
     } else {
       this.editLeaveType = 'full';
       this.editLeaveReason = '';
       this.editLeaveIsCovered = false;
       this.editLeaveCoveredByDate = day.date;
-      this.editLeaveCoveredHours = 8;
+      this.editLeaveCoveredHours = 9;
     }
 
     // Initialize covering day details
     this.activeCoveringLeaves = day.coveringFor || [];
     if (this.activeCoveringLeaves.length > 0) {
       const active = this.activeCoveringLeaves[0];
-      this.editCoveringHoursValue = active.coveredHours ?? (active.type === 'full' ? 8 : 4);
+      this.editCoveringHoursValue = active.coveredHours ?? (active.type === 'full' ? 9 : 4.5);
     } else {
-      this.editCoveringHoursValue = 8;
+      this.editCoveringHoursValue = 9;
     }
 
     this.saveMsg.set('');
@@ -445,7 +465,7 @@ export class AttendanceComponent implements OnInit {
     if (day.record?.status === 'leave' || day.leave) {
       classes.push('on-leave');
       if (day.leave?.isCovered) {
-        const reqHours = day.leave.type === 'full' ? 8 : 4;
+        const reqHours = day.leave.type === 'full' ? 9 : 4.5;
         const covHours = day.leave.coveredHours ?? 0;
         if (covHours < reqHours) {
           classes.push('on-leave-partially-covered');
@@ -457,7 +477,7 @@ export class AttendanceComponent implements OnInit {
     if (day.coveringFor && day.coveringFor.length > 0) {
       classes.push('is-covering-day');
       const active = day.coveringFor[0];
-      const reqHours = active.type === 'full' ? 8 : 4;
+      const reqHours = active.type === 'full' ? 9 : 4.5;
       const covHours = active.coveredHours ?? 0;
       if (covHours < reqHours) {
         classes.push('is-covering-day-incomplete');
@@ -483,7 +503,8 @@ export class AttendanceComponent implements OnInit {
     const day = this.selectedDay();
     if (!uid || !day) return;
 
-    if (!confirm('Are you sure you want to remove this attendance record?')) return;
+    const isConfirmed = await this.dialogSvc.confirm('Remove Attendance', 'Are you sure you want to remove this attendance record?');
+    if (!isConfirmed) return;
 
     this.isSaving.set(true);
     this.saveError.set('');

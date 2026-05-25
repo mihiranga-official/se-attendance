@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as XLSX from 'xlsx';
@@ -9,7 +9,9 @@ import { UserService } from '../../core/services/user.service';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { LeaveService } from '../../core/services/leave.service';
 import { BonusService } from '../../core/services/bonus.service';
+import { HolidayService } from '../../core/services/holiday.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CustomDialogService } from '../../core/services/custom-dialog.service';
 import { UserProfile, AttendanceRecord, LeaveRecord } from '../../core/models/user.model';
 import { BonusProgress } from '../../shared/components/bonus-card/bonus-card';
 
@@ -20,14 +22,23 @@ import { BonusProgress } from '../../shared/components/bonus-card/bonus-card';
   templateUrl: './admin.html',
   styleUrl: './admin.scss'
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, OnDestroy {
   private userSvc = inject(UserService);
   private attendSvc = inject(AttendanceService);
   private leaveSvc = inject(LeaveService);
   private bonusSvc = inject(BonusService);
   private auth = inject(AuthService);
+  readonly holidaySvc = inject(HolidayService);
+  private dialogSvc = inject(CustomDialogService);
+  private usersUnsubscribe?: () => void;
 
-  activeTab: 'users' | 'attendance' | 'leaves' | 'notifications' | 'bonus' = 'users';
+  // Holiday management state
+  newHolidayDate = '';
+  newHolidayName = '';
+  isSavingHoliday = signal(false);
+  holidaySaveMsg = signal('');
+
+  activeTab: 'users' | 'attendance' | 'leaves' | 'notifications' | 'bonus' | 'holidays' = 'users';
   showPermissionHelp = signal(false);
   users = signal<UserProfile[]>([]);
   allLeaves = signal<{ uid: string; leaves: LeaveRecord[]; userName: string }[]>([]);
@@ -62,12 +73,23 @@ export class AdminComponent implements OnInit {
     await this.loadData();
   }
 
+  ngOnDestroy() {
+    if (this.usersUnsubscribe) {
+      this.usersUnsubscribe();
+    }
+  }
+
   async loadData() {
     this.isLoading.set(true);
     try {
+      // Unsubscribe from any previous listener
+      if (this.usersUnsubscribe) {
+        this.usersUnsubscribe();
+      }
+
       // Real-time listener for users
       const usersRef = ref(database, 'users');
-      onValue(usersRef, (snap) => {
+      this.usersUnsubscribe = onValue(usersRef, (snap) => {
         const data = snap.exists() ? snap.val() : {};
         // Safety check: handle both Object and Array formats from Firebase
         const usersList = (Array.isArray(data) ? data : Object.values(data))
@@ -77,8 +99,13 @@ export class AdminComponent implements OnInit {
         this.processUsers(usersList);
       }, (err) => {
         console.error('Admin: Database error:', err);
+        // If the user has logged out or is logging out, ignore permission errors gracefully
+        if (!this.auth.currentUser() || this.auth.isLoggingOut) {
+          return;
+        }
         if (err.message.includes('permission_denied')) {
           this.showPermissionHelp.set(true);
+          return;
         }
         alert('Database connection error: ' + err.message);
       });
@@ -102,6 +129,31 @@ export class AdminComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  async addHoliday() {
+    if (!this.newHolidayDate || !this.newHolidayName.trim()) {
+      this.holidaySaveMsg.set('Please provide both a date and a name.');
+      return;
+    }
+    this.isSavingHoliday.set(true);
+    try {
+      await this.holidaySvc.setHoliday(this.newHolidayDate, this.newHolidayName.trim());
+      this.holidaySaveMsg.set(`✅ "${this.newHolidayName}" added for ${this.newHolidayDate}`);
+      this.newHolidayDate = '';
+      this.newHolidayName = '';
+      setTimeout(() => this.holidaySaveMsg.set(''), 3000);
+    } catch(e: any) {
+      this.holidaySaveMsg.set('Error: ' + e.message);
+    } finally {
+      this.isSavingHoliday.set(false);
+    }
+  }
+
+  async deleteHoliday(date: string) {
+    const isConfirmed = await this.dialogSvc.confirm('Remove Holiday', `Remove holiday on ${date}?`);
+    if (!isConfirmed) return;
+    await this.holidaySvc.removeHoliday(date);
   }
 
   private processUsers(users: UserProfile[]) {
@@ -501,7 +553,8 @@ export class AdminComponent implements OnInit {
   isSendingReminder = signal(false);
 
   async triggerManualReminder() {
-    if (!confirm('Are you sure you want to send a manual reminder to all pending employees right now?')) return;
+    const isConfirmed = await this.dialogSvc.confirm('Send Reminder', 'Are you sure you want to send a manual reminder to all pending employees right now?');
+    if (!isConfirmed) return;
 
     this.isSendingReminder.set(true);
     try {
@@ -527,7 +580,8 @@ export class AdminComponent implements OnInit {
     const body = prompt('Enter notification message:', 'Please check the latest updates.');
     if (!body) return;
 
-    if (!confirm('Are you sure you want to broadcast this to ALL users?')) return;
+    const isConfirmed = await this.dialogSvc.confirm('Broadcast Notification', 'Are you sure you want to broadcast this to ALL users?');
+    if (!isConfirmed) return;
     
     this.isSendingReminder.set(true);
     try {

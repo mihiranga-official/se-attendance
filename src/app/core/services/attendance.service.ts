@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { ref, set, get, update, remove, onValue } from 'firebase/database';
 import { database } from '../firebase.config';
 import { AttendanceRecord } from '../models/user.model';
 import { Observable, of, from } from 'rxjs';
+import { HolidayService } from './holiday.service';
 
 
 
@@ -12,6 +13,7 @@ const SATURDAY_END = '13:00';
 
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
+  private holidaySvc = inject(HolidayService);
 
   private toMinutes(time: string): number {
     if (!time) return 0;
@@ -24,7 +26,7 @@ export class AttendanceService {
   }
 
   getDayType(dateStr: string): 'weekday' | 'saturday' | 'sunday' {
-    const day = new Date(dateStr).getDay();
+    const day = new Date(dateStr + 'T00:00:00').getDay();
     if (day === 0) return 'sunday';
     if (day === 6) return 'saturday';
     return 'weekday';
@@ -79,7 +81,13 @@ export class AttendanceService {
     const checkInDate = record.checkInDate || record.date || '';
     const checkOutDate = record.checkOutDate || record.date || '';
     
-    const startDt = new Date(`${checkInDate}T${record.checkIn}`);
+    // Cap working hours starting time at 08:00 AM for early check-ins
+    let calcCheckIn = record.checkIn;
+    if (calcCheckIn && this.toMinutes(calcCheckIn) < this.toMinutes(WORK_START)) {
+      calcCheckIn = WORK_START;
+    }
+
+    const startDt = new Date(`${checkInDate}T${calcCheckIn}`);
     const endDt = new Date(`${checkOutDate}T${record.checkOut}`);
     
     let totalWorked = Math.floor((endDt.getTime() - startDt.getTime()) / (1000 * 60));
@@ -91,9 +99,12 @@ export class AttendanceService {
     if (record.is24HourShift) {
       // Deduct 2 hours for lunch and dinner breaks
       totalWorked = Math.max(0, totalWorked - 120);
-      otMinutes = Math.max(0, totalWorked - (9 * 60)); // Anything over 9h is OT? Standard is 9h.
+      otMinutes = totalWorked; // The entire 24h shift is counted as OT (minus 2h breaks = 22h of OT)
     } else {
-      if (dayType === 'saturday') {
+      const isPublicHoliday = record.date ? this.holidaySvc.isHoliday(record.date) : false;
+      if (dayType === 'sunday' || isPublicHoliday) {
+        otMinutes = totalWorked; // All hours worked on Sundays or holidays count as OT
+      } else if (dayType === 'saturday') {
         const endMin = this.toMinutes(SATURDAY_END);
         otMinutes = Math.max(0, outMin - endMin);
       } else {
@@ -115,22 +126,31 @@ export class AttendanceService {
     let day1Reason = day1IsLate ? 'Late Arrival' : 'Completed';
 
     if (!record.is24HourShift) {
-      const isCompleted = dayType === 'saturday' ? outMin >= this.toMinutes(SATURDAY_END) : outMin >= this.toMinutes(WORK_END);
-      if (!isCompleted) {
-        day1Eligible = false;
-        day1Reason = 'Left Early';
-        
-        if (outMin <= this.toMinutes('12:01')) {
-          record.actualStatus = 'Incomplete';
-        } else {
-          const reqMins = dayType === 'saturday' ? 5 * 60 : 9 * 60;
-          const workedRatio = totalWorked / reqMins;
+      if (dayType === 'saturday') {
+        const isCompleted = outMin >= this.toMinutes(SATURDAY_END);
+        if (!isCompleted) {
+          day1Eligible = false;
+          day1Reason = 'Left Early';
+          const workedRatio = totalWorked / (5 * 60);
           if (workedRatio < 0.4) record.actualStatus = 'Incomplete';
-          else if (workedRatio < 0.8) record.actualStatus = 'Half Day';
-          else record.actualStatus = 'Early Leave';
+          else record.actualStatus = 'Half Day';
+        } else {
+          record.actualStatus = day1IsLate ? 'Late Arrival' : 'Completed';
         }
       } else {
-        record.actualStatus = day1IsLate ? 'Late Arrival' : 'Completed';
+        // Weekdays (Monday - Friday)
+        const isCompleted = outMin >= this.toMinutes(WORK_END);
+        if (!isCompleted) {
+          day1Eligible = false;
+          day1Reason = 'Left Early';
+          if (outMin <= this.toMinutes('12:00')) {
+            record.actualStatus = 'Incomplete';
+          } else {
+            record.actualStatus = 'Half Day';
+          }
+        } else {
+          record.actualStatus = day1IsLate ? 'Late Arrival' : 'Completed';
+        }
       }
     } else {
       record.actualStatus = '24 Hour Shift';
@@ -167,7 +187,7 @@ export class AttendanceService {
   }
 
   async getWeeklyOT(uid: string, dateStr: string): Promise<number> {
-    const date = new Date(dateStr);
+    const date = new Date(dateStr + 'T00:00:00');
     const day = date.getDay();
     if (day === 0) return 0;
     
@@ -199,6 +219,7 @@ export class AttendanceService {
   }
 
   async saveAttendance(uid: string, record: AttendanceRecord): Promise<void> {
+    await this.holidaySvc.ensureLoaded();
     const path = `attendance/${uid}/${record.date}`;
     const weeklyOT = record.date ? await this.getWeeklyOT(uid, record.date) : 0;
     this.calculateHoursAndStatus(record, weeklyOT);
@@ -206,6 +227,7 @@ export class AttendanceService {
   }
 
   async updateAttendance(uid: string, date: string, changes: Partial<AttendanceRecord>): Promise<void> {
+    await this.holidaySvc.ensureLoaded();
     const path = `attendance/${uid}/${date}`;
     const snap = await get(ref(database, path));
     if (snap.exists()) {
@@ -255,13 +277,21 @@ export class AttendanceService {
     return result;
   }
 
-  getWorkingDaysInMonth(year: number, month: number): string[] {
+  async getWorkingDaysInMonth(year: number, month: number): Promise<string[]> {
+    await this.holidaySvc.ensureLoaded();
     const days: string[] = [];
     const daysInMonth = new Date(year, month, 0).getDate();
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const day = new Date(dateStr).getDay();
-      if (day !== 0) days.push(dateStr); // exclude Sundays
+      const day = new Date(dateStr + 'T00:00:00').getDay();
+      
+      // Exclude Sundays
+      if (day === 0) continue;
+      
+      // Exclude public holidays
+      if (this.holidaySvc.isHoliday(dateStr)) continue;
+      
+      days.push(dateStr);
     }
     return days;
   }

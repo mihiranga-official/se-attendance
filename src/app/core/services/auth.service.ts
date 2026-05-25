@@ -151,7 +151,10 @@ export class AuthService {
     }
   }
 
+  isLoggingOut = false;
+
   async logout(): Promise<void> {
+    this.isLoggingOut = true;
     const user = this.currentUser();
     if (user) {
       try {
@@ -164,6 +167,7 @@ export class AuthService {
     }
     await signOut(auth);
     this.userProfile.set(null);
+    this.isLoggingOut = false;
     this.router.navigate(['/login']);
   }
 

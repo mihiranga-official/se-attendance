@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LeaveService } from '../../core/services/leave.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CustomDialogService } from '../../core/services/custom-dialog.service';
 import { LeaveRecord } from '../../core/models/user.model';
 
 @Component({
@@ -15,6 +16,7 @@ import { LeaveRecord } from '../../core/models/user.model';
 export class LeavesComponent implements OnInit {
   private leaveSvc = inject(LeaveService);
   private auth = inject(AuthService);
+  private dialogSvc = inject(CustomDialogService);
 
   leaves = signal<LeaveRecord[]>([]);
   isLoading = signal(false);
@@ -93,7 +95,9 @@ export class LeavesComponent implements OnInit {
 
   async cancelLeave(leaveId: string) {
     const uid = this.auth.currentUser()?.uid;
-    if (!uid || !confirm('Are you sure you want to cancel this leave request?')) return;
+    if (!uid) return;
+    const isConfirmed = await this.dialogSvc.confirm('Cancel Leave Request', 'Are you sure you want to cancel this leave request?');
+    if (!isConfirmed) return;
 
     try {
       await this.leaveSvc.deleteLeave(uid, leaveId);

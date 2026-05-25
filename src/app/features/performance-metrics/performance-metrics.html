@@ -408,6 +408,37 @@
         </div>
       </div>
     </div>
+
+    <!-- 12. Sunday Worked Days -->
+    <div class="metric-card success">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+        </svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ summary()?.extraDays || 0 }}</span>
+        <span class="metric-label">Sunday Worked Days</span>
+      </div>
+      <!-- Hover Popup Detail -->
+      <div class="hover-popup">
+        <h4>Sundays Worked</h4>
+        <div class="popup-scroll">
+          @if (sundaysWorkedList().length === 0) {
+            <p class="no-records">No Sundays worked this month.</p>
+          } @else {
+            <ul class="popup-list">
+              @for (item of sundaysWorkedList(); track item.date) {
+                <li class="popup-item">
+                  <span class="popup-date">{{ formatDate(item.date) }}</span>
+                  <span class="popup-info">{{ item.info }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="section-card trend-section">

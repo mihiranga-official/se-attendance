@@ -210,7 +210,7 @@
         transform: translateY(-2px);
       }
     }
-    
+
     /* Specific Button Styles */
     &:nth-child(1) { // Refresh
        background: var(--bg-card);
@@ -342,5 +342,22 @@
     font-weight: 700;
     color: var(--text-main);
     mix-blend-mode: multiply;
+  }
+}
+
+.btn-danger-sm {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid #ef4444;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #ef4444;
+    color: #fff;
   }
 }

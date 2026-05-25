@@ -51,6 +51,7 @@ export class PerformanceMetricsComponent implements OnInit {
   foodRequestsCount = signal(0);
   foodRequestsTotalCost = signal(0);
   foodRequestsList = signal<any[]>([]);
+  sundaysWorkedList = signal<any[]>([]);
 
   isAdmin() {
     return this.auth.isAdmin();
@@ -271,6 +272,17 @@ export class PerformanceMetricsComponent implements OnInit {
       
       this.foodRequestsTotalCost.set(totalCost);
       this.foodRequestsList.set(list);
+
+      // 12. Sundays Worked
+      this.sundaysWorkedList.set(
+        sortedRecent.filter(r => {
+          const isSunday = new Date(r.date + 'T00:00:00').getDay() === 0;
+          return isSunday && (r.status === 'present' || r.checkIn);
+        }).map(r => ({
+          date: r.date,
+          info: `Worked: ${r.workedHours?.toFixed(1) || 0}h`
+        }))
+      );
     } catch (e: any) {
       console.error('Performance Load Error:', e);
       this.error.set('Could not load performance data. Please try again.');
@@ -332,6 +344,7 @@ export class PerformanceMetricsComponent implements OnInit {
     csvContent += `Leave Coverage Count,${this.leaveCoverageList().length},"${this.leaveCoverageList().map(i => `${i.date}: ${i.info} (${i.reason})`).join('; ')}"\n`;
     csvContent += `Food Requests Count,${this.foodRequestsCount() || 0},"${this.foodRequestsList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
     csvContent += `Total Food Cost,Rs. ${this.foodRequestsTotalCost() || 0},N/A\n`;
+    csvContent += `Sunday Worked Days,${this.summary()?.extraDays || 0},"${this.sundaysWorkedList().map(i => `${i.date}: ${i.info}`).join('; ')}"\n`;
     
     // Create a secure download link and trigger it
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

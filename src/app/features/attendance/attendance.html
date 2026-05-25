@@ -63,8 +63,8 @@
               </div>
             }
             @if (day.leave?.isCovered && day.leave?.coveredByDate) {
-              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 8 : 4)" style="margin-top: 4px; display: block; width: 100%; text-align: center;">
-                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 8 : 4 }}h)
+              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 9 : 4.5)" style="margin-top: 4px; display: block; width: 100%; text-align: center;">
+                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 9 : 4.5 }}h)
               </div>
             }
           } @else if (day.record?.status === 'holiday') {
@@ -75,8 +75,8 @@
               }
             </div>
             @if (day.leave?.isCovered && day.leave?.coveredByDate) {
-              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 8 : 4)">
-                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 8 : 4 }}h)
+              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 9 : 4.5)">
+                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 9 : 4.5 }}h)
               </div>
             }
           } @else if (day.record?.status === 'weekend') {
@@ -87,8 +87,8 @@
               }
             </div>
             @if (day.leave?.isCovered && day.leave?.coveredByDate) {
-              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 8 : 4)">
-                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 8 : 4 }}h)
+              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 9 : 4.5)">
+                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 9 : 4.5 }}h)
               </div>
             }
           } @else if (day.record?.status === 'leave' || day.leave) {
@@ -99,16 +99,16 @@
               }
             </div>
             @if (day.leave?.isCovered && day.leave?.coveredByDate) {
-              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 8 : 4)">
-                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 8 : 4 }}h)
+              <div class="covering-date-info" [class.incomplete]="(day.leave?.coveredHours ?? 0) < (day.leave?.type === 'full' ? 9 : 4.5)">
+                Cov: {{ day.leave?.coveredByDate | date:'MMM d' }} ({{ day.leave?.coveredHours ?? 0 }}/{{ day.leave?.type === 'full' ? 9 : 4.5 }}h)
               </div>
             }
           }
 
           @if (day.coveringFor && day.coveringFor.length > 0) {
-            <div class="covering-badge" [class.incomplete]="(day.coveringFor[0].coveredHours ?? 0) < (day.coveringFor[0].type === 'full' ? 8 : 4)">
-              <span class="dot-covering" [class.incomplete]="(day.coveringFor[0].coveredHours ?? 0) < (day.coveringFor[0].type === 'full' ? 8 : 4)"></span>
-              <span>Covering: {{ day.coveringFor[0].date | date:'MMM d' }} ({{ day.coveringFor[0].coveredHours ?? 0 }}/{{ day.coveringFor[0].type === 'full' ? 8 : 4 }}h)</span>
+            <div class="covering-badge" [class.incomplete]="(day.coveringFor[0].coveredHours ?? 0) < (day.coveringFor[0].type === 'full' ? 9 : 4.5)">
+              <span class="dot-covering" [class.incomplete]="(day.coveringFor[0].coveredHours ?? 0) < (day.coveringFor[0].type === 'full' ? 9 : 4.5)"></span>
+              <span>Covering: {{ day.coveringFor[0].date | date:'MMM d' }} ({{ day.coveringFor[0].coveredHours ?? 0 }}/{{ day.coveringFor[0].type === 'full' ? 9 : 4.5 }}h)</span>
             </div>
           }
         </div>
@@ -212,15 +212,15 @@
                   <div style="display: flex; align-items: center; gap: 10px;">
                     <input type="number" [(ngModel)]="editCoveringHoursValue" min="0" max="24" class="input-field" style="max-width: 100px;">
                     <span style="font-size: 0.85rem; color: var(--text-muted);">
-                      / {{ activeCoveringLeaves[0].type === 'full' ? 8 : 4 }} hours required
+                      / {{ activeCoveringLeaves[0].type === 'full' ? 9 : 4.5 }} hours required
                     </span>
                   </div>
                 </div>
 
-                @if (editCoveringHoursValue < (activeCoveringLeaves[0].type === 'full' ? 8 : 4)) {
+                @if (editCoveringHoursValue < (activeCoveringLeaves[0].type === 'full' ? 9 : 4.5)) {
                   <div style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--warning); display: flex; align-items: center; gap: 6px;">
                     <span class="dot" style="background: var(--warning); width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span>
-                    <span>Incomplete coverage: {{ (activeCoveringLeaves[0].type === 'full' ? 8 : 4) - editCoveringHoursValue }} hours pending.</span>
+                    <span>Incomplete coverage: {{ (activeCoveringLeaves[0].type === 'full' ? 9 : 4.5) - editCoveringHoursValue }} hours pending.</span>
                   </div>
                 } @else {
                   <div style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--success); display: flex; align-items: center; gap: 6px;">
@@ -322,17 +322,17 @@
                       <input type="date" [(ngModel)]="editLeaveCoveredByDate" class="input-field">
                     </div>
                     <div class="form-group">
-                      <label>Hours Covered <span class="optional-label">(Req: {{ editLeaveType === 'full' ? 8 : 4 }}h)</span></label>
+                      <label>Hours Covered <span class="optional-label">(Req: {{ editLeaveType === 'full' ? 9 : 4.5 }}h)</span></label>
                       <input type="number" [(ngModel)]="editLeaveCoveredHours" min="0" max="24" class="input-field">
                     </div>
                   </div>
 
-                  @if (editLeaveCoveredHours < (editLeaveType === 'full' ? 8 : 4)) {
+                  @if (editLeaveCoveredHours < (editLeaveType === 'full' ? 9 : 4.5)) {
                     <div class="benefit-banner compact warning-banner" style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.1); color: var(--warning); display: flex; align-items: center; gap: 6px; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.75rem; margin-top: 0.5rem;">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="flex-shrink: 0;">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
                       </svg>
-                      <span>Incomplete coverage: {{ (editLeaveType === 'full' ? 8 : 4) - editLeaveCoveredHours }} hours pending</span>
+                      <span>Incomplete coverage: {{ (editLeaveType === 'full' ? 9 : 4.5) - editLeaveCoveredHours }} hours pending</span>
                     </div>
                   } @else {
                     <div class="benefit-banner compact success-banner" style="background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.1); color: var(--success); display: flex; align-items: center; gap: 6px; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.75rem; margin-top: 0.5rem;">

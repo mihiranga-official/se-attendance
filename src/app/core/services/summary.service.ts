@@ -12,7 +12,7 @@ export class SummaryService {
   ) {}
 
   async getMonthlySummary(uid: string, year: number, month: number): Promise<MonthlySummary> {
-    const workingDays = this.attendanceService.getWorkingDaysInMonth(year, month);
+    const workingDays = await this.attendanceService.getWorkingDaysInMonth(year, month);
     const records = await this.attendanceService.getAttendanceForMonth(uid, year, month);
     const leaves = await this.leaveService.getLeavesForMonth(uid, year, month);
 
@@ -38,6 +38,7 @@ export class SummaryService {
 
     const coveredDays = new Set<string>();
     records.forEach(r => {
+      totalOTHours += r.otHours ?? 0;
       if (r.is24HourShift && r.checkInDate && r.checkOutDate && r.checkInDate !== r.checkOutDate) {
         coveredDays.add(r.checkOutDate);
       }
@@ -48,8 +49,18 @@ export class SummaryService {
       const leave = leaves.find(l => l.date === day);
 
       if (leave) {
-        if (leave.type === 'full') { leaveDays++; unpaidLeaveHours += 9; }
-        else { halfDays++; leaveDays += 0.5; unpaidLeaveHours += 4.5; }
+        let unpaidHoursForThisLeave = 0;
+        if (leave.isCovered) {
+          const requiredHours = leave.type === 'full' ? 9 : 4.5;
+          const coveredHours = leave.coveredHours ?? 0;
+          unpaidHoursForThisLeave = Math.max(0, requiredHours - coveredHours);
+        } else {
+          unpaidHoursForThisLeave = leave.type === 'full' ? 9 : 4.5;
+        }
+        unpaidLeaveHours += unpaidHoursForThisLeave;
+
+        if (leave.type === 'full') { leaveDays++; }
+        else { halfDays++; leaveDays += 0.5; }
         continue;
       }
 
@@ -63,7 +74,6 @@ export class SummaryService {
       } else if (rec.status === 'present' || rec.checkIn) {
         const is24hMulti = rec.is24HourShift && rec.checkInDate !== rec.checkOutDate;
         presentDays += is24hMulti ? 2 : 1;
-        totalOTHours += rec.otHours ?? 0;
         
         if (rec.isLate) {
           lateDays++;
@@ -97,7 +107,7 @@ export class SummaryService {
     // Count extra days (worked Sundays)
     const allRecords = records;
     for (const rec of allRecords) {
-      const isSunday = new Date(rec.date).getDay() === 0;
+      const isSunday = new Date(rec.date + 'T00:00:00').getDay() === 0;
       if (isSunday && (rec.status === 'present' || rec.checkIn)) {
         extraDays++;
       }
