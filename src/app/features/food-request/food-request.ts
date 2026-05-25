@@ -102,16 +102,33 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
     }));
   }
 
-  isCutoffApproaching(): boolean {
+  // Returns true if current time is within 6:00 AM – 9:00 AM ordering window
+  isOrderingOpen(): boolean {
     const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    return hours === 8 && minutes >= 55;
+    const h = now.getHours();
+    return h >= 6 && h < 9;
   }
 
+  // Warning fires at 8:55 AM — last 5 minutes of the window
+  isCutoffApproaching(): boolean {
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+    return h === 8 && m >= 55;
+  }
+
+  // Cutoff passed = outside the 6–9 AM window
   isCutoffPassed(): boolean {
-    // Temporarily disabled cutoff to allow testing/late orders
-    return false;
+    return !this.isOrderingOpen();
+  }
+
+  // Human-readable status label for the clock widget
+  get orderingWindowLabel(): string {
+    const now = new Date();
+    const h = now.getHours();
+    if (h < 6) return 'Opens at 6:00 AM';
+    if (h >= 9) return 'Closed — Reopens Tomorrow at 6 AM';
+    return 'Open';
   }
 
   loadFoodRequests() {
