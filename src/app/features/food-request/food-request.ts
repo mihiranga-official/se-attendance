@@ -231,14 +231,14 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
 
     // Action B: Silent Google Form Background Automation (Using sendBeacon to avoid CORS console errors)
     try {
-      const url = 'https://docs.google.com/forms/d/e/1FAIpQLSf6ELdbterMXih_uxZc-vzbE4PQYYztYZDYHtwEMxgmBUUWqw/formResponse';
+      const url = 'https://docs.google.com/forms/d/e/1FAIpQLSdoPrpw7Ybg5jujOEtAqcTCyTU2z7VRBdxeWoi6BTwLbnm7dg/formResponse?pli=1';
       const params = new URLSearchParams();
-      params.append('entry.1591631580', payload.name);
-      params.append('entry.373083700', payload.division);
-      params.append('entry.248001686', payload.lunchCategory);
+      params.append('entry.1711473520', payload.name);
+      params.append('entry.1809901273', payload.division);
+      params.append('entry.1524728558', payload.lunchCategory);
       params.append('fvv', '1');
       params.append('pageHistory', '0');
-      params.append('fbzx', '-2564804819205674787');
+      params.append('fbzx', '88055061906163486');
 
       const blob = new Blob([params.toString()], { type: 'application/x-www-form-urlencoded' });
       const sent = navigator.sendBeacon(url, blob);
