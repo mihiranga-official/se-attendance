@@ -126,6 +126,16 @@ h1, h2, h3, h4 {
 
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 450px;
+  
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--bg-card);
+    box-shadow: inset 0 -1px 0 var(--border);
+  }
 }
 
 /* Buttons */
@@ -281,4 +291,30 @@ body.antigravity-theme .border { border-color: rgba(99, 102, 241, 0.3); }
   0% { transform: translateY(0px); }
   50% { transform: translateY(-12px); }
   100% { transform: translateY(0px); }
+}
+
+/* Premium custom scrollbars for data grids and scroll views */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg-main);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--text-light);
+  }
 }

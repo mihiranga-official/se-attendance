@@ -69,36 +69,58 @@ export class SummaryService {
         continue;
       }
 
-      if (!rec || rec.status === 'absent') {
+      // Check if it is a Saturday
+      const isSaturday = new Date(day + 'T00:00:00').getDay() === 6;
+      let isSaturdayCovered = false;
+      if (isSaturday) {
+        let totalOT = 0;
+        const date = new Date(day + 'T00:00:00');
+        const monday = new Date(date);
+        monday.setDate(date.getDate() - 5);
+        for (let i = 0; i < 5; i++) {
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + i);
+          const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const r = recordMap.get(dStr);
+          if (r && r.otHours) {
+            totalOT += r.otHours;
+          }
+        }
+        if (totalOT >= 5) {
+          isSaturdayCovered = true;
+        }
+      }
+
+      if ((!rec && !isSaturdayCovered) || rec?.status === 'absent') {
         absentDays++;
-      } else if (rec.status === 'present' || rec.checkIn) {
-        const is24hMulti = rec.is24HourShift && rec.checkInDate !== rec.checkOutDate;
+      } else if (rec?.status === 'present' || rec?.status === 'Saturday Covered' || rec?.checkIn || isSaturdayCovered) {
+        const is24hMulti = rec?.is24HourShift && rec?.checkInDate !== rec?.checkOutDate;
         presentDays += is24hMulti ? 2 : 1;
         
-        if (rec.isLate) {
+        if (rec?.isLate) {
           lateDays++;
           totalLateMinutes += rec.lateMinutes ?? 0;
         }
-        if (rec.isSaturdayViolation) {
+        if (rec?.isSaturdayViolation) {
           saturdayViolations++;
         }
         
         // Bonus calculation
-        const bonuses = rec.bonusDaysEarned ?? (rec.lostBonus ? 0 : 1);
+        const bonuses = rec?.bonusDaysEarned ?? (rec?.lostBonus ? 0 : 1);
         const targetDays = is24hMulti ? 2 : 1;
         
         bonusEligibleDays += bonuses;
         bonusLostDays += (targetDays - bonuses);
         
-        if (rec.actualStatus === 'Early Leave') earlyLeaveDays++;
-        if (rec.actualStatus === 'Incomplete') incompleteDays++;
-        if (rec.actualStatus === 'Half Day') halfDays++;
+        if (rec?.actualStatus === 'Early Leave') earlyLeaveDays++;
+        if (rec?.actualStatus === 'Incomplete') incompleteDays++;
+        if (rec?.actualStatus === 'Half Day') halfDays++;
         
-        if (rec.is24HourShift) {
+        if (rec?.is24HourShift) {
           twentyFourHourShifts++;
           totalOvernightHours += rec.workedHours ?? 0;
         }
-        if (rec.breakfastEligible || rec.nextDayLunchEligible) {
+        if (rec?.breakfastEligible || rec?.nextDayLunchEligible) {
           freeMealEligibleDays++;
         }
       }

@@ -56,7 +56,11 @@ export class LunchAlertService {
     if (!profile || profile.role === 'admin') return;
 
     const uid = user.uid;
-    const now = new Date();
+    
+    // Enforce Asia/Colombo time to ensure correct timezone evaluation
+    const colomboTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" });
+    const now = new Date(colomboTimeStr);
+    
     const day = now.getDay();
     if (day === 0) return;
 
@@ -67,7 +71,7 @@ export class LunchAlertService {
     if (hours < 7 || hours >= 9) return;
     if (hours === 7 && minutes < 30) return;
 
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const orderedKey = `lunch_ordered_${uid}`;
     
     if (localStorage.getItem(orderedKey) === todayStr) {

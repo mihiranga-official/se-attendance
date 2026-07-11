@@ -36,6 +36,10 @@ export class BonusService {
 
     const bonusDays = Object.values(allRecords).filter(rec => {
       if (rec.date < startStr || rec.date > endStr) return false;
+      
+      // If it is Saturday Covered, it is automatically eligible for bonus day
+      if (rec.status === 'Saturday Covered') return true;
+      
       if (rec.status !== 'present') return false;
       const dateObj = new Date(rec.date + 'T00:00:00');
       const dayOfWeek = dateObj.getDay();
@@ -56,7 +60,27 @@ export class BonusService {
       }
     });
 
-    const presentDays = bonusDays.length;
+    // Count virtual Saturday Covered days (where there is no attendance record for that Saturday, but weekday OT is >= 5)
+    let virtualSaturdaysCount = 0;
+    const startObj = new Date(startDate);
+    const todayObj = new Date();
+    const endLimit = todayObj < endDate ? todayObj : endDate;
+    
+    let current = new Date(startObj);
+    while (current <= endLimit) {
+      if (current.getDay() === 6) { // Saturday
+        const dateStr = this.formatDate(current);
+        if (!allRecords[dateStr]) {
+          const weeklyOT = this.getWeeklyOTFromRecords(allRecords, dateStr);
+          if (weeklyOT >= 5) {
+            virtualSaturdaysCount++;
+          }
+        }
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
+    const presentDays = bonusDays.length + virtualSaturdaysCount;
 
     // Tiered bonus calculation
     const halfBonusEligible = presentDays >= this.HALF_BONUS_THRESHOLD;
@@ -95,6 +119,28 @@ export class BonusService {
       daysUntilFullBonus,
       currentBonus
     };
+  }
+
+  getWeeklyOTFromRecords(allRecords: Record<string, AttendanceRecord>, dateStr: string): number {
+    const date = new Date(dateStr + 'T00:00:00');
+    const day = date.getDay();
+    if (day === 0) return 0;
+    
+    const monday = new Date(date);
+    monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
+    
+    let totalOT = 0;
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dStr = this.formatDate(d);
+      if (dStr >= dateStr) break;
+      const rec = allRecords[dStr];
+      if (rec && rec.otHours) {
+        totalOT += rec.otHours;
+      }
+    }
+    return totalOT;
   }
 
   private toMinutes(time: string): number {

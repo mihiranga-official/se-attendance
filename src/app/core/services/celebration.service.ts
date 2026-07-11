@@ -5,16 +5,16 @@ import { Injectable, signal } from '@angular/core';
 })
 export class CelebrationService {
   isCelebrating = signal(false);
-  celebrationType = signal<'half' | 'full' | null>(null);
+  celebrationType = signal<'half' | 'full' | 'birthday' | null>(null);
 
-  showCelebration(type: 'half' | 'full') {
+  showCelebration(type: 'half' | 'full' | 'birthday', birthdayBoyName?: string) {
     if (this.isCelebrating()) return;
 
     this.celebrationType.set(type);
     this.isCelebrating.set(true);
 
     // Create the overlay elements
-    this.createCelebrationElements(type);
+    this.createCelebrationElements(type, birthdayBoyName);
 
     // Auto cleanup after 10 seconds
     setTimeout(() => {
@@ -24,7 +24,7 @@ export class CelebrationService {
     }, 10000);
   }
 
-  private createCelebrationElements(type: 'half' | 'full') {
+  private createCelebrationElements(type: 'half' | 'full' | 'birthday', birthdayBoyName?: string) {
     const container = document.createElement('div');
     container.id = 'celebration-overlay';
     container.style.position = 'fixed';
@@ -40,9 +40,13 @@ export class CelebrationService {
     // Add Message
     const msg = document.createElement('div');
     msg.className = 'celebration-message';
-    msg.innerHTML = type === 'half' 
-      ? '<h1>🎉 Congratulations! 🎉</h1><p>You are eligible for one basic salary bonus!</p>'
-      : '<h1>🎊 AMAZING! 🎊</h1><p>You have get double bonus because you have completed 240 days!</p>';
+    if (type === 'half') {
+      msg.innerHTML = '<h1>🎉 Congratulations! 🎉</h1><p>You are eligible for one basic salary bonus!</p>';
+    } else if (type === 'full') {
+      msg.innerHTML = '<h1>🎊 AMAZING! 🎊</h1><p>You have get double bonus because you have completed 240 days!</p>';
+    } else {
+      msg.innerHTML = `<h1>🎂 Happy Birthday! 🎂</h1><p>Wishing you a wonderful birthday, <strong>${birthdayBoyName || 'Birthday Star'}</strong>! 🎉</p>`;
+    }
     
     msg.style.position = 'absolute';
     msg.style.top = '50%';
@@ -79,8 +83,8 @@ export class CelebrationService {
       this.createBalloon(container);
     }
 
-    // Add Firecrackers for full bonus
-    if (type === 'full') {
+    // Add Firecrackers for full bonus or birthday
+    if (type === 'full' || type === 'birthday') {
       for (let i = 0; i < 10; i++) {
         setTimeout(() => this.createFirecracker(container), i * 500);
       }

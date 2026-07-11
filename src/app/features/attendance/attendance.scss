@@ -277,6 +277,7 @@
   
   &.holiday { background: #fee2e2; color: #ef4444; }
   &.weekend { background: #e0e7ff; color: #4f46e5; }
+  &.saturday-covered { background: #e0e7ff; color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.3); }
   &.leave {
     background: #fef3c7;
     color: #d97706;
@@ -603,3 +604,53 @@
 
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.day-birthdays {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+
+.birthday-card-cell {
+  animation: pulse-bday 2s infinite ease-in-out;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(236, 72, 153, 0.25);
+  }
+}
+
+@keyframes pulse-bday {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.day-event-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 6px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 3px;
+  width: 100%;
+  border: 1px solid transparent;
+
+  &.special {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+
+  &.personal {
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+    border-color: rgba(99, 102, 241, 0.2);
+  }
+}

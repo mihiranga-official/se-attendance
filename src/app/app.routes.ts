@@ -50,6 +50,10 @@ export const routes: Routes = [
       {
         path: 'food-request',
         loadComponent: () => import('./features/food-request/food-request').then(m => m.FoodRequestComponent)
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/profile/profile').then(m => m.ProfileComponent)
       }
 
     ]

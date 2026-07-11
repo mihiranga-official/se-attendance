@@ -7,6 +7,8 @@ export interface UserProfile {
   position?: string;
   fcmToken?: string;
   createdAt: string;
+  dob?: string; // YYYY-MM-DD
+  photoUrl?: string;
 }
 
 export type ShiftType = 'normal' | '24h';

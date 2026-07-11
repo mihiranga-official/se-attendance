@@ -2,7 +2,7 @@ import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as XLSX from 'xlsx';
-import { ref, get, onValue, query, orderByChild, limitToLast, update } from 'firebase/database';
+import { ref, get, onValue, query, orderByChild, limitToLast, update, push, set, remove } from 'firebase/database';
 import { database, functions } from '../../core/firebase.config';
 import { httpsCallable } from 'firebase/functions';
 import { UserService } from '../../core/services/user.service';
@@ -12,6 +12,7 @@ import { BonusService } from '../../core/services/bonus.service';
 import { HolidayService } from '../../core/services/holiday.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CustomDialogService } from '../../core/services/custom-dialog.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { UserProfile, AttendanceRecord, LeaveRecord } from '../../core/models/user.model';
 import { BonusProgress } from '../../shared/components/bonus-card/bonus-card';
 
@@ -30,7 +31,9 @@ export class AdminComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   readonly holidaySvc = inject(HolidayService);
   private dialogSvc = inject(CustomDialogService);
+  private notificationSvc = inject(NotificationService);
   private usersUnsubscribe?: () => void;
+  private eventsUnsubscribe?: () => void;
 
   // Holiday management state
   newHolidayDate = '';
@@ -38,7 +41,17 @@ export class AdminComponent implements OnInit, OnDestroy {
   isSavingHoliday = signal(false);
   holidaySaveMsg = signal('');
 
-  activeTab: 'users' | 'attendance' | 'leaves' | 'notifications' | 'bonus' | 'holidays' = 'users';
+  // Special Events management state
+  specialEvents = signal<any[]>([]);
+  newEventDate = '';
+  newEventTitle = '';
+  newEventDesc = '';
+  newEventTarget: 'all' | 'specific' = 'all';
+  newEventTargetUid = '';
+  isSavingEvent = signal(false);
+  eventSaveMsg = signal('');
+
+  activeTab: 'users' | 'attendance' | 'leaves' | 'notifications' | 'bonus' | 'holidays' | 'events' = 'users';
   showPermissionHelp = signal(false);
   users = signal<UserProfile[]>([]);
   allLeaves = signal<{ uid: string; leaves: LeaveRecord[]; userName: string }[]>([]);
@@ -62,7 +75,12 @@ export class AdminComponent implements OnInit, OnDestroy {
   // Add User states
   showAddUserModal = signal(false);
   isSavingUser = signal(false);
-  newUserData = { name: '', email: '', role: 'employee' as 'admin' | 'employee', uid: '' };
+  newUserData = { name: '', email: '', role: 'employee' as 'admin' | 'employee', uid: '', dob: '' };
+
+  // Edit User states
+  showEditUserModal = signal(false);
+  isSavingEdit = signal(false);
+  editingUserData = signal<Partial<UserProfile>>({});
 
   // User Import states
   showUserImportModal = signal(false);
@@ -77,6 +95,9 @@ export class AdminComponent implements OnInit, OnDestroy {
     if (this.usersUnsubscribe) {
       this.usersUnsubscribe();
     }
+    if (this.eventsUnsubscribe) {
+      this.eventsUnsubscribe();
+    }
   }
 
   async loadData() {
@@ -86,6 +107,25 @@ export class AdminComponent implements OnInit, OnDestroy {
       if (this.usersUnsubscribe) {
         this.usersUnsubscribe();
       }
+      if (this.eventsUnsubscribe) {
+        this.eventsUnsubscribe();
+      }
+
+      // Real-time listener for special events
+      const specialEventsRef = ref(database, 'specialEvents');
+      this.eventsUnsubscribe = onValue(specialEventsRef, (snap) => {
+        if (!snap.exists()) {
+          this.specialEvents.set([]);
+        } else {
+          const raw = snap.val();
+          const list = Object.entries(raw).map(([id, item]: [string, any]) => ({
+            ...item,
+            id
+          }));
+          list.sort((a, b) => b.date.localeCompare(a.date));
+          this.specialEvents.set(list);
+        }
+      });
 
       // Real-time listener for users
       const usersRef = ref(database, 'users');
@@ -373,7 +413,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   }
 
   async addNewUser() {
-    const { name, email, role, uid } = this.newUserData;
+    const { name, email, role, uid, dob } = this.newUserData;
     if (!name || !email) {
       alert('Name and Email are required.');
       return;
@@ -387,19 +427,50 @@ export class AdminComponent implements OnInit, OnDestroy {
         name,
         email,
         role,
+        dob: dob || undefined,
         createdAt: new Date().toISOString()
       };
 
       await this.userSvc.createUserProfile(profile);
       alert('User profile created successfully.');
       this.showAddUserModal.set(false);
-      this.newUserData = { name: '', email: '', role: 'employee', uid: '' };
+      this.newUserData = { name: '', email: '', role: 'employee', uid: '', dob: '' };
       await this.loadData();
     } catch (e) {
       console.error(e);
       alert('Failed to create user profile.');
     } finally {
       this.isSavingUser.set(false);
+    }
+  }
+
+  editUser(user: UserProfile) {
+    this.editingUserData.set({ ...user });
+    this.showEditUserModal.set(true);
+  }
+
+  async saveUserEdit() {
+    const editData = this.editingUserData();
+    if (!editData.uid || !editData.name || !editData.email) {
+      alert('Name and Email are required.');
+      return;
+    }
+    this.isSavingEdit.set(true);
+    try {
+      await this.userSvc.updateUser(editData.uid, {
+        name: editData.name,
+        email: editData.email,
+        role: editData.role,
+        dob: editData.dob || undefined
+      });
+      alert('User profile updated successfully.');
+      this.showEditUserModal.set(false);
+      await this.loadData();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to update user profile.');
+    } finally {
+      this.isSavingEdit.set(false);
     }
   }
 
@@ -594,6 +665,82 @@ export class AdminComponent implements OnInit, OnDestroy {
       alert('Failed to send broadcast. ' + e.message);
     } finally {
       this.isSendingReminder.set(false);
+    }
+  }
+
+  getUserName(uid: string): string {
+    const user = this.users().find(u => u.uid === uid);
+    return user ? user.name : `User (${uid.slice(-4)})`;
+  }
+
+  async addSpecialEvent() {
+    if (!this.newEventDate || !this.newEventTitle.trim()) {
+      this.eventSaveMsg.set('Please provide both event date and title.');
+      return;
+    }
+    if (this.newEventTarget === 'specific' && !this.newEventTargetUid) {
+      this.eventSaveMsg.set('Please select a target employee.');
+      return;
+    }
+
+    this.isSavingEvent.set(true);
+    this.eventSaveMsg.set('');
+
+    try {
+      const eventRef = ref(database, 'specialEvents');
+      const newEventRef = push(eventRef);
+      const eventData = {
+        date: this.newEventDate,
+        title: this.newEventTitle.trim(),
+        description: this.newEventDesc.trim(),
+        target: this.newEventTarget,
+        targetUid: this.newEventTarget === 'specific' ? this.newEventTargetUid : null,
+        createdAt: new Date().toISOString()
+      };
+
+      await set(newEventRef, eventData);
+
+      // Pushing in-app notifications to targeted users
+      const notifTitle = `📅 New Event: ${eventData.title}`;
+      const notifMsg = `${eventData.description || 'No description provided.'} (Scheduled for ${eventData.date})`;
+
+      if (this.newEventTarget === 'all') {
+        const activeUsers = this.users();
+        const promises = activeUsers.map(u => 
+          this.notificationSvc.sendNotification(u.uid, notifTitle, notifMsg, 'event')
+        );
+        await Promise.all(promises);
+      } else {
+        await this.notificationSvc.sendNotification(this.newEventTargetUid, notifTitle, notifMsg, 'event');
+      }
+
+      this.eventSaveMsg.set(`✅ Event "${eventData.title}" created successfully!`);
+      this.newEventDate = '';
+      this.newEventTitle = '';
+      this.newEventDesc = '';
+      this.newEventTarget = 'all';
+      this.newEventTargetUid = '';
+      setTimeout(() => this.eventSaveMsg.set(''), 3000);
+    } catch (e: any) {
+      console.error(e);
+      if (e.message?.toLowerCase().includes('permission_denied') || e.message?.toLowerCase().includes('permission denied')) {
+        this.showPermissionHelp.set(true);
+      }
+      this.eventSaveMsg.set('❌ Error: ' + e.message);
+    } finally {
+      this.isSavingEvent.set(false);
+    }
+  }
+
+  async deleteSpecialEvent(id: string, title: string) {
+    const isConfirmed = await this.dialogSvc.confirm('Remove Special Event', `Are you sure you want to remove "${title}"?`);
+    if (!isConfirmed) return;
+
+    try {
+      await remove(ref(database, `specialEvents/${id}`));
+      alert('Event removed successfully.');
+    } catch (e: any) {
+      alert('Failed to remove event: ' + e.message);
     }
   }
 }

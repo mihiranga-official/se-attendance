@@ -55,6 +55,9 @@
     <button [class.active]="activeTab === 'holidays'" (click)="activeTab = 'holidays'">
       🎌 Public Holidays
     </button>
+    <button [class.active]="activeTab === 'events'" (click)="activeTab = 'events'">
+      📅 Special Events
+    </button>
   </div>
 
   @if (isLoading()) {
@@ -74,7 +77,9 @@
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
+                <th>Date of Birth</th>
                 <th>Joined Date</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -86,7 +91,13 @@
                   </td>
                   <td>{{ user.email }}</td>
                   <td><span class="role-badge" [class]="user.role">{{ user.role }}</span></td>
+                  <td>{{ user.dob ? (user.dob | date:'mediumDate') : '—' }}</td>
                   <td>{{ user.createdAt ? (user.createdAt | date:'mediumDate') : '—' }}</td>
+                  <td>
+                    <button class="btn-action-edit" (click)="editUser(user)" title="Edit Employee Profile">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    </button>
+                  </td>
                 </tr>
               }
             </tbody>
@@ -315,6 +326,106 @@
           </div>
         </div>
       }
+
+      <!-- Events Tab -->
+      @if (activeTab === 'events') {
+        <div class="tab-panel">
+          <div class="section-card" style="max-width: 800px; margin: 0 auto; border: none; box-shadow: none;">
+            <div class="section-header" style="margin-bottom: 1.5rem;">
+              <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--text-primary);">📅 Special Events Management</h3>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 4px;">Create company-wide celebrations or targeted user events. These will show on selected users' profiles, dashboards, and calendar view.</p>
+            </div>
+
+            <!-- Add Event Form -->
+            <div style="background: var(--bg-main); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem;">Create Special Event</h4>
+              
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label>Event Date</label>
+                  <input type="date" [(ngModel)]="newEventDate" class="input-field" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label>Event Title</label>
+                  <input type="text" [(ngModel)]="newEventTitle" placeholder="e.g. Annual Office Party" class="input-field" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label>Target Audience</label>
+                  <select [(ngModel)]="newEventTarget" class="input-field">
+                    <option value="all">All Users</option>
+                    <option value="specific">Specific User</option>
+                  </select>
+                </div>
+              </div>
+
+              @if (newEventTarget === 'specific') {
+                <div class="form-group" style="margin-bottom: 1rem;">
+                  <label>Select Target Employee</label>
+                  <select [(ngModel)]="newEventTargetUid" class="input-field">
+                    <option value="" disabled>Choose Employee...</option>
+                    @for (user of users(); track user.uid) {
+                      <option [value]="user.uid">{{ user.name }} ({{ user.email }})</option>
+                    }
+                  </select>
+                </div>
+              }
+
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label>Description / Details</label>
+                <input type="text" [(ngModel)]="newEventDesc" placeholder="e.g. at 5:00 PM at Casserole Restaurant. Dress Code: Smart Casual." class="input-field" />
+              </div>
+
+              <button class="btn-primary" (click)="addSpecialEvent()" [disabled]="isSavingEvent()">
+                {{ isSavingEvent() ? 'Saving...' : '+ Create Special Event' }}
+              </button>
+            </div>
+
+            @if (eventSaveMsg()) {
+              <div class="alert alert-success" style="margin-bottom: 1.5rem; padding: 10px 15px; border-radius: 6px; background-color: rgba(34, 197, 94, 0.1); color: #22c55e; font-size: 0.9rem;">
+                {{ eventSaveMsg() }}
+              </div>
+            }
+
+            <!-- Events List Table -->
+            @if (specialEvents().length === 0) {
+              <div class="empty-state" style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                <p>No special events scheduled yet. Create one above.</p>
+              </div>
+            } @else {
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Title</th>
+                      <th>Target</th>
+                      <th>Description</th>
+                      <th style="width: 100px; text-align: right;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (e of specialEvents(); track e.id) {
+                      <tr>
+                        <td><strong>{{ e.date }}</strong></td>
+                        <td><span style="font-weight: 600; color: var(--primary);">{{ e.title }}</span></td>
+                        <td>
+                          <span class="role-badge" [class.admin]="e.target === 'all'" [class.employee]="e.target === 'specific'">
+                            {{ e.target === 'all' ? 'All Users' : getUserName(e.targetUid) }}
+                          </span>
+                        </td>
+                        <td class="reason-cell" [title]="e.description">{{ e.description || '—' }}</td>
+                        <td style="text-align: right;">
+                          <button class="btn-danger-sm" (click)="deleteSpecialEvent(e.id, e.title)">Remove</button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        </div>
+      }
     </div>
 
     <!-- System Diagnostics -->
@@ -329,19 +440,10 @@
           </button>
         </div>
         <div class="modal-body">
-          <p style="color: var(--danger); font-weight: 600; margin-bottom: 15px;">Your Firebase Database Rules are blocking access to the user list.</p>
-          <p>To fix this, go to your <strong>Firebase Console > Realtime Database > Rules</strong> and paste this configuration:</p>
+          <p style="color: var(--danger); font-weight: 600; margin-bottom: 15px;">Your Firebase Database Rules are blocking database operations (such as loading users or saving special events).</p>
+          <p>To fix this, go to your <strong>Firebase Console > Realtime Database > Rules</strong> and replace the configuration with the complete secure rules defined in your local project file: <strong>database.rules.json</strong>.</p>
           
-          <pre style="background: #1e293b; color: #fff; padding: 15px; border-radius: 8px; font-size: 0.8rem; overflow-x: auto; margin: 15px 0;">
-{{ '{' }}
-  "rules": {{ '{' }}
-    ".read": "auth != null",
-    ".write": "auth != null"
-  {{ '}' }}
-{{ '}' }}
-          </pre>
-          
-          <p class="help-text">Note: These rules allow any logged-in user to read/write. For better security later, you can restrict it further.</p>
+          <p class="help-text">Note: The local rules file contains the correct permissions for all nodes including user profiles, attendance, leaves, and the new <strong>specialEvents</strong> node.</p>
         </div>
         <div class="modal-footer">
           <button class="btn-primary" (click)="showPermissionHelp.set(false)">I'll update my rules</button>
@@ -518,6 +620,10 @@
             <label>Email Address</label>
             <input type="email" [(ngModel)]="newUserData.email" class="input-field" placeholder="john@example.com">
           </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" [(ngModel)]="newUserData.dob" class="input-field">
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label>Role</label>
@@ -537,6 +643,49 @@
           <button class="btn-primary" (click)="addNewUser()" [disabled]="isSavingUser()">
             @if (isSavingUser()) { <span class="spinner-sm"></span> }
             <span>Create Profile</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Edit User Modal -->
+  @if (showEditUserModal()) {
+    <div class="modal-backdrop" (click)="showEditUserModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Edit Employee Profile</h3>
+          <button class="close-btn" (click)="showEditUserModal.set(false)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">Modify the employee profile details. Date of birth is used for calendar events and birthday reminders.</p>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" [(ngModel)]="editingUserData().name" class="input-field" placeholder="John Doe">
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" [(ngModel)]="editingUserData().email" class="input-field" placeholder="john@example.com">
+          </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" [(ngModel)]="editingUserData().dob" class="input-field">
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <select [(ngModel)]="editingUserData().role" class="input-field">
+              <option value="employee">Employee</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="showEditUserModal.set(false)">Cancel</button>
+          <button class="btn-primary" (click)="saveUserEdit()" [disabled]="isSavingEdit()">
+            @if (isSavingEdit()) { <span class="spinner-sm"></span> }
+            <span>Save Changes</span>
           </button>
         </div>
       </div>

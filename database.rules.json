@@ -1,9 +1,9 @@
 {
   "rules": {
     "users": {
-      ".read": "root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      ".read": "auth.uid !== null",
       "$uid": {
-        ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
+        ".read": "auth.uid !== null",
         ".write": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
         ".validate": "newData.hasChildren(['uid', 'email', 'name'])"
       }
@@ -43,6 +43,10 @@
       ".write": "auth.uid !== null"
     },
     "holidays": {
+      ".read": "auth.uid !== null",
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "specialEvents": {
       ".read": "auth.uid !== null",
       ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'"
     },

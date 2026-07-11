@@ -34,7 +34,9 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
     'Hirun Prabodhya',
     'Udesh Wickramanayake ',
     'Thilina welideniya',
-    'Helitha Winsuka'
+    'Helitha Winsuka',
+    'Hiruni Kuashalaya',
+    'Pradeep Suranga'
   ];
 
 
@@ -109,16 +111,21 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
     }));
   }
 
+  getColomboDate(): Date {
+    const colomboTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" });
+    return new Date(colomboTimeStr);
+  }
+
   // Returns true if current time is within 6:00 AM – 9:00 AM ordering window
   isOrderingOpen(): boolean {
-    const now = new Date();
+    const now = this.getColomboDate();
     const h = now.getHours();
     return h >= 6 && h < 9;
   }
 
   // Warning fires at 8:55 AM — last 5 minutes of the window
   isCutoffApproaching(): boolean {
-    const now = new Date();
+    const now = this.getColomboDate();
     const h = now.getHours();
     const m = now.getMinutes();
     return h === 8 && m >= 55;
@@ -131,7 +138,7 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
 
   // Human-readable status label for the clock widget
   get orderingWindowLabel(): string {
-    const now = new Date();
+    const now = this.getColomboDate();
     const h = now.getHours();
     if (h < 6) return 'Opens at 6:00 AM';
     if (h >= 9) return 'Closed — Reopens Tomorrow at 6 AM';

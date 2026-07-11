@@ -18,104 +18,160 @@
           <span class="day-badge badge-working">Full Day</span>
           }
         </div>
+
+        <!-- Punch actions and time chips layout (Left-aligned bottom-left of welcome section) -->
+        <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-top: 1.25rem;">
+          <div class="check-actions" style="align-items: flex-start; margin-top: 0; gap: 0;">
+            @if (!todayRecord()?.checkIn) {
+            <button class="btn-checkin" (click)="checkIn()" [disabled]="isCheckingIn() || isSunday" id="btn-checkin">
+              @if (isCheckingIn()) {
+              <span class="spinner"></span>
+              } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                <path
+                  d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+              </svg>
+              }
+              <span>Check In</span>
+            </button>
+            } @else if (!todayRecord()?.checkOut) {
+            <button class="btn-checkout" (click)="checkOut()" [disabled]="isCheckingOut()" id="btn-checkout">
+              @if (isCheckingOut()) {
+              <span class="spinner"></span>
+              } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-5h2V7h-2v8z M8 7h2v8H8V7z" />
+              </svg>
+              }
+              <span>Check Out</span>
+            </button>
+            } @else {
+            <div class="completed-badge">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+              </svg>
+              <span>Day Complete</span>
+            </div>
+            }
+          </div>
+
+          @if (todayRecord()) {
+          <div class="today-times" style="margin-top: 0;">
+            @if (!isEditing()) {
+              @if (todayRecord()?.checkIn) {
+              <div class="time-chip" (click)="toggleEdit()">
+                <span class="time-label">In</span>
+                <span class="time-value">{{ todayRecord()?.checkIn }}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" class="edit-hint"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              </div>
+              }
+              @if (todayRecord()?.checkOut) {
+              <div class="time-chip" (click)="toggleEdit()">
+                <span class="time-label">Out</span>
+                <span class="time-value">{{ todayRecord()?.checkOut }}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" class="edit-hint"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              </div>
+              }
+            } @else {
+              <div class="edit-times-form">
+                <div class="edit-inputs">
+                  <div class="edit-input-group">
+                    <span class="edit-label">In</span>
+                    <input type="time" [(ngModel)]="editCheckIn" class="edit-input">
+                  </div>
+                  <div class="edit-input-group">
+                    <span class="edit-label">Out</span>
+                    <input type="time" [(ngModel)]="editCheckOut" class="edit-input">
+                  </div>
+                </div>
+                <div class="edit-actions">
+                  <button class="btn-save-edit" (click)="saveEdit()" title="Save changes">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+                  </button>
+                  <button class="btn-cancel-edit" (click)="toggleEdit()" title="Cancel">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+          }
+        </div>
       </div>
-      <div class="hero-right">
-        <div class="check-actions">
-          @if (!todayRecord()?.checkIn) {
-          <button class="btn-checkin" (click)="checkIn()" [disabled]="isCheckingIn() || isSunday" id="btn-checkin">
-            @if (isCheckingIn()) {
-            <span class="spinner"></span>
-            } @else {
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-              <path
-                d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-            </svg>
-            }
-            <span>Check In</span>
-          </button>
-          } @else if (!todayRecord()?.checkOut) {
-          <button class="btn-checkout" (click)="checkOut()" [disabled]="isCheckingOut()" id="btn-checkout">
-            @if (isCheckingOut()) {
-            <span class="spinner"></span>
-            } @else {
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-5h2V7h-2v8z M8 7h2v8H8V7z" />
-            </svg>
-            }
-            <span>Check Out</span>
-          </button>
-          } @else {
-          <div class="completed-badge">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-            </svg>
-            <span>Day Complete</span>
+      <div class="hero-right" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center;">
+        <div class="hero-cards-row" style="display: flex; gap: 1rem; flex-wrap: nowrap; justify-content: flex-end; width: auto; max-width: 100%;">
+          @if (hasLeavesAndOvertime) {
+          <div class="analytics-card" [class.success-card]="netOvertimeBalance >= 0" [class.warning-card]="netOvertimeBalance < 0" style="border-radius: 12px; padding: 1rem; width: 300px; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid var(--border); background: var(--bg-card); margin: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+              <div class="card-icon" [style.color]="netOvertimeBalance >= 0 ? '#10b981' : '#f59e0b'">
+                @if (netOvertimeBalance >= 0) {
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                } @else {
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                  </svg>
+                }
+              </div>
+              <h4 class="card-title" style="font-size: 0.95rem; margin: 0; font-weight: 700; color: var(--text-main);">Overtime & Leave Balance</h4>
+            </div>
+            <div class="card-content" style="font-size: 0.8rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; justify-content: space-between;">
+                <span>Total Overtime:</span>
+                <strong style="color: var(--text-main);">{{ monthlySummary()?.totalOTHours || 0 }} hrs</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span>Total Leaves Taken:</span>
+                <strong style="color: var(--text-main);">{{ monthlySummary()?.unpaidLeaveHours || 0 }} hrs</strong>
+              </div>
+              <div style="height: 1px; background: var(--border); margin: 4px 0;"></div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                <span>{{ netOvertimeBalance >= 0 ? 'Overtime Hours Left:' : 'Uncleared Leave Hours:' }}</span>
+                <strong [style.color]="netOvertimeBalance >= 0 ? '#10b981' : '#f59e0b'">
+                  {{ absNetOvertimeBalance }} hrs
+                </strong>
+              </div>
+              @if (netOvertimeBalance < 0 && isMonthEndingSoon) {
+                <div class="urgent-banner" style="font-size: 0.75rem; padding: 6px 10px; background: rgba(239,68,68,0.2); color: #fca5a5; border-radius: 6px; margin-top: 6px; font-weight: 600;">
+                  Warning: Month ending soon! Cover leaves to avoid deductions.
+                </div>
+              }
+            </div>
           </div>
           }
-        </div>
 
-        @if (todayRecord()) {
-        <div class="today-times">
-          @if (!isEditing()) {
-            @if (todayRecord()?.checkIn) {
-            <div class="time-chip" (click)="toggleEdit()">
-              <span class="time-label">In</span>
-              <span class="time-value">{{ todayRecord()?.checkIn }}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" class="edit-hint"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-            </div>
-            }
-            @if (todayRecord()?.checkOut) {
-            <div class="time-chip" (click)="toggleEdit()">
-              <span class="time-label">Out</span>
-              <span class="time-value">{{ todayRecord()?.checkOut }}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" class="edit-hint"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-            </div>
-            }
-          } @else {
-            <div class="edit-times-form">
-              <div class="edit-inputs">
-                <div class="edit-input-group">
-                  <span class="edit-label">In</span>
-                  <input type="time" [(ngModel)]="editCheckIn" class="edit-input">
-                </div>
-                <div class="edit-input-group">
-                  <span class="edit-label">Out</span>
-                  <input type="time" [(ngModel)]="editCheckOut" class="edit-input">
-                </div>
+          <!-- Upcoming Events Card (Top Section) -->
+          <div class="analytics-card upcoming-events-top-card" style="border-radius: 12px; padding: 1rem; width: 300px; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid var(--border); background: var(--bg-card); margin: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+              <div class="card-icon" style="color: var(--primary);">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                  <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+                </svg>
               </div>
-              <div class="edit-actions">
-                <button class="btn-save-edit" (click)="saveEdit()" title="Save changes">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
-                </button>
-                <button class="btn-cancel-edit" (click)="toggleEdit()" title="Cancel">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-              </div>
+              <h4 class="card-title" style="font-size: 0.95rem; margin: 0; font-weight: 700; color: var(--text-main);">Upcoming Events</h4>
             </div>
-          }
-        </div>
-        }
-
-        @if (remainingLeaveHours > 0 && remainingLeaveHours >= 9) {
-        <div class="analytics-card warning-card" style="margin-top: 1rem; border-radius: 12px; padding: 1rem; max-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-          <div class="card-icon" style="margin-bottom: 0.5rem; color: #f59e0b;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-            </svg>
-          </div>
-          <div class="card-content">
-            <h4 class="card-title" style="font-size: 0.95rem; margin-bottom: 4px; color: #f59e0b;">Performance Analytics Alert</h4>
-            <p class="card-desc" style="font-size: 0.8rem; margin-bottom: 6px; opacity: 0.9;">You have <strong>{{ remainingLeaveHours }} hours</strong> ({{ remainingLeaveHours / 9 | number:'1.1-1' }} days) of uncleared leave.</p>
-            @if (isMonthEndingSoon) {
-              <div class="urgent-banner" style="font-size: 0.75rem; padding: 6px 10px; background: rgba(239,68,68,0.2); color: #fca5a5; border-radius: 6px;">
-                <strong>Warning:</strong> Month ending soon! Cover leaves to avoid deductions.
-              </div>
-            }
+            <div class="card-content" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin;">
+              @if (upcomingEvents().length === 0) {
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">No upcoming events scheduled.</p>
+              } @else {
+                @for (ev of upcomingEvents(); track ev.id) {
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.8rem; width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                      <span>{{ ev.isPersonal ? '📌' : '✨' }}</span>
+                      <span style="color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="ev.title">
+                        {{ ev.title }}
+                      </span>
+                    </div>
+                    <strong style="color: var(--text-main); flex-shrink: 0; font-weight: 700;">{{ ev.date | date:'MMM d' }}</strong>
+                  </div>
+                }
+              }
+            </div>
           </div>
         </div>
-        }
       </div>
     </div>
 
@@ -127,6 +183,39 @@
     }
   </div>
 
+  <!-- Birthday Banner Alerts -->
+  @if (todayBirthdays().length > 0 || tomorrowBirthdays().length > 0) {
+    <div class="birthday-alerts-container">
+      @for (bday of todayBirthdays(); track bday.uid) {
+        @if (bday.isSelf) {
+          <div class="birthday-banner self-birthday">
+            <div class="birthday-icon">🎉 🎂 🎁</div>
+            <div class="birthday-content">
+              <h3>Happy Birthday, {{ bday.name }}!</h3>
+              <p>Wishing you an amazing day ahead! You are {{ bday.age }} years old today!</p>
+            </div>
+          </div>
+        } @else {
+          <div class="birthday-banner coworker-birthday">
+            <div class="birthday-icon">🎂</div>
+            <div class="birthday-content">
+              <h3>Today is {{ bday.name }}'s Birthday!</h3>
+              <p>Let's wish them a Happy Birthday! They are turning {{ bday.age }} years old today.</p>
+            </div>
+          </div>
+        }
+      }
+      @for (bday of tomorrowBirthdays(); track bday.uid) {
+        <div class="birthday-banner tomorrow-birthday">
+          <div class="birthday-icon">🎁</div>
+          <div class="birthday-content">
+            <h3>Tomorrow is {{ bday.name }}'s Birthday!</h3>
+            <p>Tomorrow is <strong>{{ bday.name }}</strong>'s birthday. They are currently {{ bday.currentAge }} years old and will be turning {{ bday.nextAge }}!</p>
+          </div>
+        </div>
+      }
+    </div>
+  }
 
   <!-- Main Content Grid -->
   <div class="dashboard-main-grid">
@@ -243,6 +332,8 @@
           </div>
         </div>
       </div>
+
+
     </div>
   </div>
 

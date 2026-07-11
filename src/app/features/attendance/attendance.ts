@@ -7,6 +7,9 @@ import { LeaveService } from '../../core/services/leave.service';
 import { HolidayService } from '../../core/services/holiday.service';
 import { CustomDialogService } from '../../core/services/custom-dialog.service';
 import { AttendanceRecord, LeaveRecord, ShiftType } from '../../core/models/user.model';
+import { UserService } from '../../core/services/user.service';
+import { database } from '../../core/firebase.config';
+import { ref, get } from 'firebase/database';
 
 interface CalendarDay {
   date: string;
@@ -22,6 +25,9 @@ interface CalendarDay {
   coveringFor?: LeaveRecord[];
   isPublicHoliday?: boolean;
   holidayName?: string;
+  birthdays?: any[];
+  specialEvent?: any;
+  personalEvent?: any;
 }
 
 @Component({
@@ -37,6 +43,7 @@ export class AttendanceComponent implements OnInit {
   private leaveSvc = inject(LeaveService);
   readonly holidaySvc = inject(HolidayService);
   private dialogSvc = inject(CustomDialogService);
+  private userSvc = inject(UserService);
 
   currentYear = signal(new Date().getFullYear());
   currentMonth = signal(new Date().getMonth() + 1);
@@ -78,16 +85,27 @@ export class AttendanceComponent implements OnInit {
     const uid = this.auth.currentUser()?.uid;
     if (!uid) return;
     await this.holidaySvc.ensureLoaded();
-    const [recs, leaves] = await Promise.all([
+    const [recs, leaves, users, specialEventsSnap, personalEventsSnap] = await Promise.all([
       this.attendanceSvc.getAttendanceForMonth(uid, this.currentYear(), this.currentMonth()),
-      this.leaveSvc.getLeavesForMonth(uid, this.currentYear(), this.currentMonth())
+      this.leaveSvc.getLeavesForMonth(uid, this.currentYear(), this.currentMonth()),
+      this.userSvc.getAllUsers(),
+      get(ref(database, 'specialEvents')),
+      get(ref(database, `users/${uid}/personalEvents`))
     ]);
+
+    const specialEvents = specialEventsSnap.exists()
+      ? Object.values(specialEventsSnap.val()).filter((e: any) => e.target === 'all' || e.targetUid === uid)
+      : [];
+    const personalEvents = personalEventsSnap.exists()
+      ? Object.values(personalEventsSnap.val())
+      : [];
+
     this.records.set(recs);
     this.leaves.set(leaves);
-    this.buildCalendar(recs, leaves);
+    this.buildCalendar(recs, leaves, users, specialEvents, personalEvents);
   }
 
-  buildCalendar(recs: AttendanceRecord[], leaves: LeaveRecord[]) {
+  buildCalendar(recs: AttendanceRecord[], leaves: LeaveRecord[], users: any[] = [], specialEvents: any[] = [], personalEvents: any[] = []) {
     const y = this.currentYear();
     const m = this.currentMonth();
     const firstDay = new Date(y, m - 1, 1).getDay();
@@ -132,6 +150,65 @@ export class AttendanceComponent implements OnInit {
       }
     });
 
+    const getBirthdaysForDate = (dateStr: string) => {
+      const [currY, currM, currD] = dateStr.split('-').map(Number);
+      return users.filter(u => {
+        if (!u.dob) return false;
+        const [by, bm, bd] = u.dob.split('-').map(Number);
+        return bm === currM && bd === currD;
+      });
+    };
+
+    const getEffectiveRecord = (dateStr: string, dayOfWeekVal: number) => {
+      const existingRecord = recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr);
+      if (existingRecord) return existingRecord;
+
+      let isSaturdayCovered = false;
+      if (dayOfWeekVal === 6) { // Saturday
+        let totalOT = 0;
+        const date = new Date(dateStr + 'T00:00:00');
+        const monday = new Date(date);
+        monday.setDate(date.getDate() - 5);
+        for (let i = 0; i < 5; i++) {
+          const dObj = new Date(monday);
+          dObj.setDate(monday.getDate() + i);
+          const dStr = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
+          const r = recMap.get(dStr);
+          if (r && r.otHours) {
+            totalOT += r.otHours;
+          }
+        }
+        if (totalOT >= 5) {
+          isSaturdayCovered = true;
+        }
+      }
+
+      if (isSaturdayCovered) {
+        return {
+          date: dateStr,
+          status: 'Saturday Covered' as const,
+          actualStatus: 'Saturday Covered' as const,
+          notes: 'Saturday Covered by Weekly OT',
+          workedHours: 0,
+          otHours: 0
+        };
+      }
+
+      const isPublicHoliday = this.holidaySvc.isHoliday(dateStr);
+      if (isPublicHoliday) {
+        const holidayName = this.holidaySvc.getHolidayName(dateStr) ?? 'Public Holiday';
+        return {
+          date: dateStr,
+          status: 'holiday' as const,
+          notes: holidayName,
+          workedHours: 0,
+          otHours: 0
+        };
+      }
+
+      return undefined;
+    };
+
     const days: CalendarDay[] = [];
 
     // Padding for first week
@@ -141,15 +218,19 @@ export class AttendanceComponent implements OnInit {
       const pm = m === 1 ? 12 : m - 1;
       const py = m === 1 ? y - 1 : y;
       const dateStr = `${py}-${String(pm).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayOfWeekVal = new Date(py, pm - 1, d).getDay();
       days.push({
         date: dateStr,
         day: d, isToday: false, isCurrentMonth: false,
-        dayOfWeek: new Date(py, pm - 1, d).getDay(),
-        record: recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr),
+        dayOfWeek: dayOfWeekVal,
+        record: getEffectiveRecord(dateStr, dayOfWeekVal),
         isStart: startMap.has(dateStr),
         isEnd: endMap.has(dateStr),
         isContinuation: spanMap.has(dateStr),
-        coveringFor: coveringMap.get(dateStr)
+        coveringFor: coveringMap.get(dateStr),
+        birthdays: getBirthdaysForDate(dateStr),
+        specialEvent: specialEvents.find((e: any) => e.date === dateStr),
+        personalEvent: personalEvents.find((e: any) => e.date === dateStr)
       });
     }
 
@@ -158,28 +239,23 @@ export class AttendanceComponent implements OnInit {
       const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const isPublicHoliday = this.holidaySvc.isHoliday(dateStr);
       const holidayName = this.holidaySvc.getHolidayName(dateStr) ?? undefined;
-      const existingRecord = recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr);
-      // Auto-create a virtual holiday record if admin declared it a public holiday and no record exists
-      const effectiveRecord: AttendanceRecord | undefined = existingRecord ?? (isPublicHoliday ? {
-        date: dateStr,
-        status: 'holiday',
-        notes: holidayName || 'Public Holiday',
-        workedHours: 0,
-        otHours: 0
-      } : undefined);
+      const dayOfWeekVal = new Date(y, m - 1, d).getDay();
       days.push({
         date: dateStr, day: d,
         isToday: dateStr === todayStr,
         isCurrentMonth: true,
-        dayOfWeek: new Date(y, m - 1, d).getDay(),
-        record: effectiveRecord,
+        dayOfWeek: dayOfWeekVal,
+        record: getEffectiveRecord(dateStr, dayOfWeekVal),
         isStart: startMap.has(dateStr),
         isEnd: endMap.has(dateStr),
         isContinuation: spanMap.has(dateStr),
         leave: leaveMap.get(dateStr),
         coveringFor: coveringMap.get(dateStr),
         isPublicHoliday,
-        holidayName
+        holidayName,
+        birthdays: getBirthdaysForDate(dateStr),
+        specialEvent: specialEvents.find((e: any) => e.date === dateStr),
+        personalEvent: personalEvents.find((e: any) => e.date === dateStr)
       });
     }
 
@@ -189,15 +265,19 @@ export class AttendanceComponent implements OnInit {
       const nm = m === 12 ? 1 : m + 1;
       const ny = m === 12 ? y + 1 : y;
       const dateStr = `${ny}-${String(nm).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayOfWeekVal = new Date(ny, nm - 1, d).getDay();
       days.push({
         date: dateStr,
         day: d, isToday: false, isCurrentMonth: false,
-        dayOfWeek: new Date(ny, nm - 1, d).getDay(),
-        record: recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr),
+        dayOfWeek: dayOfWeekVal,
+        record: getEffectiveRecord(dateStr, dayOfWeekVal),
         isStart: startMap.has(dateStr),
         isEnd: endMap.has(dateStr),
         isContinuation: spanMap.has(dateStr),
-        coveringFor: coveringMap.get(dateStr)
+        coveringFor: coveringMap.get(dateStr),
+        birthdays: getBirthdaysForDate(dateStr),
+        specialEvent: specialEvents.find((e: any) => e.date === dateStr),
+        personalEvent: personalEvents.find((e: any) => e.date === dateStr)
       });
     }
 

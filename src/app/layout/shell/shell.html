@@ -60,6 +60,12 @@
           </svg>
           <span>Food Request</span>
         </a>
+        <a routerLink="/profile" routerLinkActive="active" (click)="closeSidebar()" class="nav-item" id="nav-profile">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          <span>My Profile</span>
+        </a>
 
       </div>
 
@@ -91,7 +97,7 @@
         </div>
         <div class="promo-tag">
           <span class="pulse-green-dot"></span>
-          <span>Official App v1.0.3</span>
+          <span>Official App v1.1.1</span>
         </div>
       </div>
     </div>
@@ -126,7 +132,13 @@
 
     <div class="sidebar-footer">
       <div class="user-info">
-        <div class="avatar-sm">{{ initials }}</div>
+        <div class="avatar-sm" style="overflow: hidden; display: flex; align-items: center; justify-content: center;">
+          @if (auth.userProfile()?.photoUrl) {
+            <img [src]="auth.userProfile()?.photoUrl" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+          } @else {
+            {{ initials }}
+          }
+        </div>
         <div class="user-details">
           <span class="user-name">{{ auth.userProfile()?.name }}</span>
           <span class="user-role">{{ auth.userProfile()?.role }}</span>
@@ -169,14 +181,89 @@
           }
         </button>
 
+        <!-- Notification Center Dropdown -->
+        <div class="notification-container">
+          <button class="notification-bell" (click)="toggleNotifications()" title="Notifications" id="btn-notifications">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+            </svg>
+            @if (unreadCount() > 0) {
+              <span class="bell-badge">{{ unreadCount() }}</span>
+            }
+          </button>
+
+          @if (notificationsOpen()) {
+            <div class="notification-overlay" (click)="closeNotifications()"></div>
+            <div class="notification-dropdown slide-in-top">
+              <div class="dropdown-header-row">
+                <span class="dropdown-title">Notifications</span>
+                @if (unreadCount() > 0) {
+                  <button class="btn-text-action" (click)="markAllAsRead()">Mark all read</button>
+                }
+              </div>
+              <div class="dropdown-divider"></div>
+              
+              <div class="notification-scroll-list">
+                @if (notifications().length === 0) {
+                  <div class="notifications-empty">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="36" height="36" style="color: var(--text-muted);">
+                      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                    </svg>
+                    <p>All caught up! No notifications.</p>
+                  </div>
+                } @else {
+                  @for (n of notifications(); track n.id) {
+                    <div class="notification-item" [class.unread]="!n.read" (click)="markAsRead(n.id)">
+                      <div class="item-icon" [class]="n.type">
+                        @if (n.type === 'event') { 📅 }
+                        @else if (n.type === 'system') { ⚙️ }
+                        @else { 🔔 }
+                      </div>
+                      <div class="item-body">
+                        <div class="item-title">{{ n.title }}</div>
+                        <div class="item-message">{{ n.message }}</div>
+                        <div class="item-time">{{ getRelativeTime(n.timestamp) }}</div>
+                      </div>
+                      <button class="btn-clear-single" (click)="clearNotification(n.id, $event)" title="Dismiss">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
+              
+              @if (notifications().length > 0) {
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-footer-row">
+                  <button class="btn-clear-all" (click)="clearAllNotifications()">Clear All</button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
         <div class="user-dropdown-container">
-          <div class="topbar-avatar" (click)="toggleDropdown()">{{ initials }}</div>
+          <div class="topbar-avatar" (click)="toggleDropdown()" style="overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            @if (auth.userProfile()?.photoUrl) {
+              <img [src]="auth.userProfile()?.photoUrl" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+            } @else {
+              {{ initials }}
+            }
+          </div>
 
           @if (dropdownOpen()) {
           <div class="dropdown-overlay" (click)="closeDropdown()"></div>
           <div class="user-dropdown slide-in-top">
             <div class="dropdown-header">
-              <div class="avatar-md">{{ initials }}</div>
+              <div class="avatar-md" style="overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                @if (auth.userProfile()?.photoUrl) {
+                  <img [src]="auth.userProfile()?.photoUrl" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+                } @else {
+                  {{ initials }}
+                }
+              </div>
               <div class="dropdown-user-info">
                 <span class="user-name">{{ auth.userProfile()?.name }}</span>
                 <span class="user-email">{{ auth.userProfile()?.email }}</span>
@@ -205,7 +292,7 @@
     <footer class="app-footer">
       <div class="footer-content">
         <p>Developed by <strong>Software Division</strong> with <span class="heart">❤️</span> in Sri Lanka | <span
-            class="version">v1.0.3</span></p>
+            class="version">v1.1.1</span></p>
       </div>
     </footer>
   </div>
@@ -213,7 +300,7 @@
   <!-- Inactivity Modal -->
   @if (inactivity.showWarning()) {
   <div class="modal-backdrop z-max">
-    <div class="modal-card security-alert bounce-in">
+    <div class="modal-card security-alert bounce-in" (mouseenter)="inactivity.stayLoggedIn()">
       <div class="modal-body text-center">
         <!-- Visual status ring representing security timeout -->
         <div class="status-indicator-ring">

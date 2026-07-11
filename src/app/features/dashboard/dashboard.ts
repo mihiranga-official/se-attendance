@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
@@ -10,6 +10,9 @@ import { LeaveService } from '../../core/services/leave.service';
 import { AttendanceRecord, MonthlySummary } from '../../core/models/user.model';
 import { BonusCardComponent, BonusProgress } from '../../shared/components/bonus-card/bonus-card';
 import { AttendanceStatusCardComponent } from '../../shared/components/attendance-status-card/attendance-status-card';
+import { UserService } from '../../core/services/user.service';
+import { database } from '../../core/firebase.config';
+import { ref, onValue, off } from 'firebase/database';
 
 @Component({
   selector: 'app-dashboard',
@@ -18,13 +21,14 @@ import { AttendanceStatusCardComponent } from '../../shared/components/attendanc
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   private attendanceSvc = inject(AttendanceService);
   private summarySvc = inject(SummaryService);
   private bonusSvc = inject(BonusService);
   private celebrationSvc = inject(CelebrationService);
   private leaveSvc = inject(LeaveService);
+  private userSvc = inject(UserService);
 
   today = new Date();
   todayStr = this.attendanceSvc.getTodayStr();
@@ -34,6 +38,12 @@ export class DashboardComponent implements OnInit {
   monthlySummary = signal<MonthlySummary | null>(null);
   bonusProgress = signal<BonusProgress | null>(null);
   recentRecords = signal<AttendanceRecord[]>([]);
+  
+  todayBirthdays = signal<any[]>([]);
+  tomorrowBirthdays = signal<any[]>([]);
+  upcomingEvents = signal<any[]>([]);
+  private eventsUnsubscribe?: () => void;
+  private personalUnsubscribe?: () => void;
 
   // Lists for card hover breakdowns
   presentDaysList = signal<{ date: string; checkIn?: string; checkOut?: string; actualStatus?: string }[]>([]);
@@ -74,6 +84,25 @@ export class DashboardComponent implements OnInit {
     const unpaid = summary.unpaidLeaveHours || 0;
     const ot = summary.totalOTHours || 0;
     return parseFloat(Math.max(0, unpaid - ot).toFixed(2));
+  }
+
+  get hasLeavesAndOvertime(): boolean {
+    const summary = this.monthlySummary();
+    if (!summary) return false;
+    const unpaid = summary.unpaidLeaveHours || 0;
+    return unpaid > 0;
+  }
+
+  get netOvertimeBalance(): number {
+    const summary = this.monthlySummary();
+    if (!summary) return 0;
+    const unpaid = summary.unpaidLeaveHours || 0;
+    const ot = summary.totalOTHours || 0;
+    return parseFloat((ot - unpaid).toFixed(2));
+  }
+
+  get absNetOvertimeBalance(): number {
+    return Math.abs(this.netOvertimeBalance);
   }
 
   get isMonthEndingSoon(): boolean {
@@ -120,16 +149,19 @@ export class DashboardComponent implements OnInit {
     const uid = this.auth.currentUser()?.uid;
     if (!uid) return;
 
+    this.listenToEvents(uid);
+
     // Update clock every minute
     setInterval(() => this.currentTime.set(this.attendanceSvc.getCurrentTimeStr()), 60000);
 
     this.isLoadingBonus.set(true);
-    const [rec, summary, recent, bonus, leaves] = await Promise.all([
+    const [rec, summary, recent, bonus, leaves, allUsers] = await Promise.all([
       this.attendanceSvc.getAttendanceForDate(uid, this.todayStr),
       this.summarySvc.getMonthlySummary(uid, this.today.getFullYear(), this.today.getMonth() + 1),
       this.attendanceSvc.getAttendanceForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1),
       this.bonusSvc.getBonusProgress(uid),
-      this.leaveSvc.getLeavesForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1)
+      this.leaveSvc.getLeavesForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1),
+      this.userSvc.getAllUsers()
     ]);
 
     this.todayRecord.set(rec);
@@ -141,6 +173,57 @@ export class DashboardComponent implements OnInit {
 
     // Check for milestone celebration
     this.checkBonusCelebration(bonus);
+
+    // Calculate today's and tomorrow's birthdays
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const todayM = today.getMonth() + 1;
+    const todayD = today.getDate();
+    
+    const tomorrowM = tomorrow.getMonth() + 1;
+    const tomorrowD = tomorrow.getDate();
+
+    const currentUserProfile = this.auth.userProfile();
+    const todayBirthdaysList: any[] = [];
+    const tomorrowBirthdaysList: any[] = [];
+
+    allUsers.forEach(u => {
+      if (!u.dob) return;
+      const [by, bm, bd] = u.dob.split('-').map(Number);
+      const age = today.getFullYear() - by;
+      
+      // Check if birthday is today
+      if (bm === todayM && bd === todayD) {
+        todayBirthdaysList.push({
+          uid: u.uid,
+          name: u.name,
+          age: age,
+          isSelf: u.uid === currentUserProfile?.uid
+        });
+      }
+      
+      // Check if birthday is tomorrow
+      if (bm === tomorrowM && bd === tomorrowD) {
+        const currentAge = today.getMonth() < bm - 1 || (today.getMonth() === bm - 1 && today.getDate() < bd) ? age - 1 : age;
+        tomorrowBirthdaysList.push({
+          uid: u.uid,
+          name: u.name,
+          currentAge: currentAge,
+          nextAge: currentAge + 1
+        });
+      }
+    });
+
+    this.todayBirthdays.set(todayBirthdaysList);
+    this.tomorrowBirthdays.set(tomorrowBirthdaysList);
+
+    // Trigger birthday celebration overlay if today is user's birthday
+    const selfBday = todayBirthdaysList.find(b => b.isSelf);
+    if (selfBday) {
+      this.celebrationSvc.showCelebration('birthday', selfBday.name);
+    }
   }
 
   async checkIn() {
@@ -293,5 +376,61 @@ export class DashboardComponent implements OnInit {
       document.body.classList.toggle('antigravity-theme');
       this.antigravityClicks = 0;
     }
+  }
+
+  ngOnDestroy() {
+    if (this.eventsUnsubscribe) this.eventsUnsubscribe();
+    if (this.personalUnsubscribe) this.personalUnsubscribe();
+  }
+
+  listenToEvents(uid: string) {
+    const specialRef = ref(database, 'specialEvents');
+    const personalRef = ref(database, `users/${uid}/personalEvents`);
+
+    let specEvents: any[] = [];
+    let persEvents: any[] = [];
+
+    const updateUpcoming = () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const combined = [...specEvents, ...persEvents]
+        .filter(ev => {
+          const evDate = new Date(ev.date + 'T00:00:00');
+          return evDate >= today;
+        })
+        .sort((a, b) => a.date.localeCompare(b.date));
+      this.upcomingEvents.set(combined);
+    };
+
+    this.eventsUnsubscribe = onValue(specialRef, (snap) => {
+      if (!snap.exists()) {
+        specEvents = [];
+      } else {
+        const raw = snap.val();
+        specEvents = Object.entries(raw)
+          .map(([id, item]: [string, any]) => ({
+            ...item,
+            id,
+            isPersonal: false
+          }))
+          .filter(e => e.target === 'all' || e.targetUid === uid);
+      }
+      updateUpcoming();
+    });
+
+    this.personalUnsubscribe = onValue(personalRef, (snap) => {
+      if (!snap.exists()) {
+        persEvents = [];
+      } else {
+        const raw = snap.val();
+        persEvents = Object.entries(raw).map(([id, item]: [string, any]) => ({
+          ...item,
+          id,
+          isPersonal: true
+        }));
+      }
+      updateUpcoming();
+    });
   }
 }
