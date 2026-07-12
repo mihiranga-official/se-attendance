@@ -48,16 +48,18 @@
       <div class="stat-label">Check-In Time</div>
       <div class="stat-value highlight">{{ checkInTime }}</div>
     </div>
-    <div class="stat-box">
-      <div class="stat-label">Shift Type</div>
-      <div class="stat-value">{{ shiftType }}</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-label">Full Day</div>
-      <div class="stat-value" [class.warning]="!fullDayEligible">
-        {{ fullDayEligible ? 'Eligible' : 'Lost' }}
+    @if (todayRecord?.checkIn) {
+      <div class="stat-box">
+        <div class="stat-label">Shift Type</div>
+        <div class="stat-value">{{ shiftType }}</div>
       </div>
-    </div>
+      <div class="stat-box">
+        <div class="stat-label">Full Day</div>
+        <div class="stat-value" [class.warning]="!fullDayEligible">
+          {{ fullDayEligible ? 'Eligible' : 'Lost' }}
+        </div>
+      </div>
+    }
   </div>
 
   @if (is24HourShift) {
