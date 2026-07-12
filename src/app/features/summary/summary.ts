@@ -53,9 +53,12 @@ export class SummaryComponent implements OnInit {
         this.summary.set(sum);
         this.records.set(recs.sort((a, b) => a.date.localeCompare(b.date)));
       } else {
-        const yearSum = await this.summarySvc.getYearlySummary(uid, this.currentYear);
+        const [yearSum, recs] = await Promise.all([
+          this.summarySvc.getYearlySummary(uid, this.currentYear),
+          this.attendSvc.getAttendanceForYear(uid, this.currentYear)
+        ]);
         this.yearlySummary.set(yearSum);
-        this.records.set([]); // Optional: fetch all records for the year, but might be too large. Let's leave empty or fetch them. For now empty to just show cards.
+        this.records.set(recs.sort((a, b) => a.date.localeCompare(b.date)));
       }
     } catch (e) {
       console.error(e);

@@ -163,7 +163,7 @@ export class SummaryService {
   async getYearlySummary(uid: string, year: number): Promise<MonthlySummary> {
     const allMonths = await this.getPerformanceTrend(uid, year);
 
-    return allMonths.reduce((acc, curr) => {
+    const aggregated = allMonths.reduce((acc, curr) => {
       return {
         ...acc,
         totalWorkingDays: acc.totalWorkingDays + curr.totalWorkingDays,
@@ -186,6 +186,12 @@ export class SummaryService {
         unpaidLeaveHours: (acc.unpaidLeaveHours || 0) + (curr.unpaidLeaveHours || 0)
       };
     });
+
+    aggregated.attendancePercentage = aggregated.totalWorkingDays > 0
+      ? parseFloat(((aggregated.presentDays / aggregated.totalWorkingDays) * 100).toFixed(1))
+      : 0;
+
+    return aggregated;
   }
 
   async getPerformanceTrend(uid: string, year: number): Promise<MonthlySummary[]> {
