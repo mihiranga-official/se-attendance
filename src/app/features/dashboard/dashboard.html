@@ -13,7 +13,7 @@
           </svg>
           <span>{{ currentTime() }}</span>
           @if (isSunday) {
-          <span class="day-badge badge-holiday">Holiday</span>
+          <span class="day-badge badge-offday">Off Day</span>
           } @else if (isSaturday) {
           <span class="day-badge badge-working">Full Day</span>
           }
@@ -23,7 +23,7 @@
         <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-top: 1.25rem;">
           <div class="check-actions" style="align-items: flex-start; margin-top: 0; gap: 0;">
             @if (!todayRecord()?.checkIn) {
-            <button class="btn-checkin" (click)="checkIn()" [disabled]="isCheckingIn() || isSunday" id="btn-checkin">
+            <button class="btn-checkin" (click)="checkIn()" [disabled]="isCheckingIn()" id="btn-checkin">
               @if (isCheckingIn()) {
               <span class="spinner"></span>
               } @else {

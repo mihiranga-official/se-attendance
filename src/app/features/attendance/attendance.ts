@@ -567,7 +567,7 @@ export class AttendanceComponent implements OnInit {
   }
 
   getDayTypeLabel(day: CalendarDay): string {
-    if (day.dayOfWeek === 0) return 'Holiday';
+    if (day.dayOfWeek === 0) return 'Off Day';
     if (day.dayOfWeek === 6) return 'Full Day';
     return '';
   }

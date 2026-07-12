@@ -80,6 +80,11 @@
     color: #fecaca;
   }
 
+  &.badge-offday {
+    background: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+  }
+
   &.badge-working {
     background: rgba(59, 130, 246, 0.2);
     color: #bfdbfe;
