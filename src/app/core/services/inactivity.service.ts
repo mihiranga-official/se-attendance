@@ -13,6 +13,7 @@ export class InactivityService {
   showWarning = signal(false);
   countdown = signal(30);
   private stop$ = new Subject<void>();
+  private timerStop$ = new Subject<void>();
   private countdownInterval: any = null;
 
   startTracking() {
@@ -29,7 +30,9 @@ export class InactivityService {
       );
 
       activity$.pipe(takeUntil(this.stop$)).subscribe(() => {
-        this.resetTimer();
+        this.ngZone.run(() => {
+          this.stayLoggedIn();
+        });
       });
 
       this.resetTimer();
@@ -38,6 +41,7 @@ export class InactivityService {
 
   stopTracking() {
     this.stop$.next();
+    this.timerStop$.next();
     this.showWarning.set(false);
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
@@ -48,9 +52,10 @@ export class InactivityService {
   private resetTimer() {
     this.ngZone.run(() => {
       this.showWarning.set(false);
+      this.timerStop$.next(); // Cancel previous timer subscription
       
       // Start the main inactivity timer
-      timer(this.TIMEOUT_MS).pipe(takeUntil(this.stop$)).subscribe(() => {
+      timer(this.TIMEOUT_MS).pipe(takeUntil(merge(this.stop$, this.timerStop$))).subscribe(() => {
         this.onTimeoutReached();
       });
     });
