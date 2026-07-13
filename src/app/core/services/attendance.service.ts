@@ -32,7 +32,7 @@ export class AttendanceService {
     return 'weekday';
   }
 
-  calculateHoursAndStatus(record: Partial<AttendanceRecord>, weeklyOT: number = 0): void {
+  calculateHoursAndStatus(record: Partial<AttendanceRecord>): void {
     if (!record.checkIn) {
       record.actualStatus = 'Incomplete';
       return;
@@ -163,10 +163,7 @@ export class AttendanceService {
     });
     if (day1Eligible) record.bonusDaysEarned++;
 
-    if (dayType === 'saturday' && weeklyOT >= 5) {
-      record.actualStatus = 'Saturday Covered';
-      record.status = 'Saturday Covered';
-    }
+
 
     // Day 2 Logic (Overnight)
     if (record.is24HourShift && checkInDate !== checkOutDate) {
@@ -186,43 +183,10 @@ export class AttendanceService {
     record.lostBonus = record.bonusDaysEarned === 0;
   }
 
-  async getWeeklyOT(uid: string, dateStr: string): Promise<number> {
-    const date = new Date(dateStr + 'T00:00:00');
-    const day = date.getDay();
-    if (day === 0) return 0;
-    
-    const monday = new Date(date);
-    monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
-    
-    let totalOT = 0;
-    for (let i = 0; i < 5; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (dStr >= dateStr) break;
-      try {
-        const snap = await get(ref(database, `attendance/${uid}/${dStr}`));
-        if (snap.exists()) {
-          const rec = snap.val() as AttendanceRecord;
-          if (rec.otHours) totalOT += rec.otHours;
-        }
-      } catch (err) {
-        console.warn('Firebase read failed for OT, using localStorage fallback');
-        const cachedStr = localStorage.getItem(`attendance_${uid}_${dStr}`);
-        if (cachedStr) {
-          const rec = JSON.parse(cachedStr) as AttendanceRecord;
-          if (rec.otHours) totalOT += rec.otHours;
-        }
-      }
-    }
-    return totalOT;
-  }
-
   async saveAttendance(uid: string, record: AttendanceRecord): Promise<void> {
     await this.holidaySvc.ensureLoaded();
     const path = `attendance/${uid}/${record.date}`;
-    const weeklyOT = record.date ? await this.getWeeklyOT(uid, record.date) : 0;
-    this.calculateHoursAndStatus(record, weeklyOT);
+    this.calculateHoursAndStatus(record);
     await set(ref(database, path), record);
   }
 
@@ -233,8 +197,7 @@ export class AttendanceService {
     if (snap.exists()) {
       const existing = snap.val() as AttendanceRecord;
       const merged = { ...existing, ...changes };
-      const weeklyOT = await this.getWeeklyOT(uid, date);
-      this.calculateHoursAndStatus(merged, weeklyOT);
+      this.calculateHoursAndStatus(merged);
       await update(ref(database, path), merged);
     }
   }

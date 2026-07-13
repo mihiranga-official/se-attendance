@@ -69,31 +69,9 @@ export class SummaryService {
         continue;
       }
 
-      // Check if it is a Saturday
-      const isSaturday = new Date(day + 'T00:00:00').getDay() === 6;
-      let isSaturdayCovered = false;
-      if (isSaturday) {
-        let totalOT = 0;
-        const date = new Date(day + 'T00:00:00');
-        const monday = new Date(date);
-        monday.setDate(date.getDate() - 5);
-        for (let i = 0; i < 5; i++) {
-          const d = new Date(monday);
-          d.setDate(monday.getDate() + i);
-          const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-          const r = recordMap.get(dStr);
-          if (r && r.otHours) {
-            totalOT += r.otHours;
-          }
-        }
-        if (totalOT >= 5) {
-          isSaturdayCovered = true;
-        }
-      }
-
-      if ((!rec && !isSaturdayCovered) || rec?.status === 'absent') {
+      if (!rec || rec?.status === 'absent') {
         absentDays++;
-      } else if (rec?.status === 'present' || rec?.status === 'Saturday Covered' || rec?.checkIn || isSaturdayCovered) {
+      } else if (rec?.status === 'present' || rec?.status === 'Saturday Covered' || rec?.checkIn) {
         const is24hMulti = rec?.is24HourShift && rec?.checkInDate !== rec?.checkOutDate;
         presentDays += is24hMulti ? 2 : 1;
         

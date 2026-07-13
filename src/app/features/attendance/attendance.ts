@@ -163,36 +163,7 @@ export class AttendanceComponent implements OnInit {
       const existingRecord = recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr);
       if (existingRecord) return existingRecord;
 
-      let isSaturdayCovered = false;
-      if (dayOfWeekVal === 6) { // Saturday
-        let totalOT = 0;
-        const date = new Date(dateStr + 'T00:00:00');
-        const monday = new Date(date);
-        monday.setDate(date.getDate() - 5);
-        for (let i = 0; i < 5; i++) {
-          const dObj = new Date(monday);
-          dObj.setDate(monday.getDate() + i);
-          const dStr = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
-          const r = recMap.get(dStr);
-          if (r && r.otHours) {
-            totalOT += r.otHours;
-          }
-        }
-        if (totalOT >= 5) {
-          isSaturdayCovered = true;
-        }
-      }
 
-      if (isSaturdayCovered) {
-        return {
-          date: dateStr,
-          status: 'Saturday Covered' as const,
-          actualStatus: 'Saturday Covered' as const,
-          notes: 'Saturday Covered by Weekly OT',
-          workedHours: 0,
-          otHours: 0
-        };
-      }
 
       const isPublicHoliday = this.holidaySvc.isHoliday(dateStr);
       if (isPublicHoliday) {
