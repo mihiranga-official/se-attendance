@@ -2,41 +2,27 @@
   "rules": {
     "users": {
       ".read": "auth.uid !== null",
-      "$uid": {
-        ".read": "auth.uid !== null",
-        ".write": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
-        ".validate": "newData.hasChildren(['uid', 'email', 'name'])"
-      }
+      ".write": "auth.uid !== null"
+    },
+    "leaveBalances": {
+      ".read": "auth.uid !== null",
+      ".write": "auth.uid !== null"
     },
     "attendance": {
-      ".read": "root.child('users').child(auth.uid).child('role').val() === 'admin'",
-      ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'",
-      "$uid": {
-        ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
-        ".write": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
-        "$date": {
-          ".validate": "newData.hasChildren(['date', 'status'])"
-        }
-      }
+      ".read": "auth.uid !== null",
+      ".write": "auth.uid !== null"
     },
     "leaves": {
-      ".read": "root.child('users').child(auth.uid).child('role').val() === 'admin'",
-      ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'",
-      "$uid": {
-        ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
-        ".write": "auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin'",
-        "$leaveId": {
-          ".validate": "newData.hasChildren(['date', 'type', 'status'])"
-        }
-      }
+      ".read": "auth.uid !== null",
+      ".write": "auth.uid !== null"
     },
     "settings": {
       ".read": "auth.uid !== null",
-      ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      ".write": "auth.uid !== null"
     },
     "notifications": {
-      ".read": "root.child('users').child(auth.uid).child('role').val() === 'admin'",
-      ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      ".read": "auth.uid !== null",
+      ".write": "auth.uid !== null"
     },
     "foodRequests": {
       ".read": "auth.uid !== null",
@@ -44,14 +30,14 @@
     },
     "holidays": {
       ".read": "auth.uid !== null",
-      ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      ".write": "auth.uid !== null"
     },
     "specialEvents": {
       ".read": "auth.uid !== null",
-      ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      ".write": "auth.uid !== null"
     },
-    ".read": false,
-    ".write": false
+    ".read": "auth.uid !== null",
+    ".write": "auth.uid !== null"
   }
 }
 

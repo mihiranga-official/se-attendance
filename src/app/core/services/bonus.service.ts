@@ -2,9 +2,13 @@ import { Injectable, inject } from '@angular/core';
 import { get, ref } from 'firebase/database';
 import { database } from '../firebase.config';
 import { AttendanceRecord } from '../models/user.model';
+import { HolidayService } from './holiday.service';
+import { AttendanceService } from './attendance.service';
 
 @Injectable({ providedIn: 'root' })
 export class BonusService {
+  private holidaySvc = inject(HolidayService);
+  private attendanceSvc = inject(AttendanceService);
   private readonly HALF_BONUS_THRESHOLD = 200;
   private readonly FULL_BONUS_THRESHOLD = 240;
 
@@ -23,44 +27,23 @@ export class BonusService {
     return { startDate, endDate };
   }
 
-  async getBonusProgress(uid: string) {
+  async getBonusProgress(uid: string, targetDate: Date = new Date()) {
+    await this.holidaySvc.ensureLoaded();
     const snap = await get(ref(database, `attendance/${uid}`));
     const allRecords = snap.exists() ? snap.val() as Record<string, AttendanceRecord> : {};
-    return this.calculateBonusFromRecords(allRecords);
+    return this.calculateBonusFromRecords(allRecords, targetDate);
   }
 
-  calculateBonusFromRecords(allRecords: Record<string, AttendanceRecord>) {
+  calculateBonusFromRecords(allRecords: Record<string, AttendanceRecord>, targetDate: Date = new Date()) {
     const { startDate, endDate } = this.getFinancialYearRange();
     const startStr = this.formatDate(startDate);
     const endStr = this.formatDate(endDate);
 
-    const bonusDays = Object.values(allRecords).filter(rec => {
-      if (rec.date < startStr || rec.date > endStr) return false;
-      
-      // If it is Saturday Covered, it is automatically eligible for bonus day
-      if (rec.status === 'Saturday Covered') return true;
-      
-      if (rec.status !== 'present') return false;
-      const dateObj = new Date(rec.date + 'T00:00:00');
-      const dayOfWeek = dateObj.getDay();
-      if (dayOfWeek === 0) return false;
-      if (!rec.checkIn || !rec.checkOut) return false;
-
-      const inMin = this.toMinutes(rec.checkIn);
-      const outMin = this.toMinutes(rec.checkOut);
-      const startMin = this.toMinutes('08:00');
-      if (inMin > startMin) return false;
-
-      if (dayOfWeek === 6) { // Saturday
-        const endMin = this.toMinutes('13:00');
-        return outMin >= endMin;
-      } else { // Weekday
-        const endMin = this.toMinutes('17:00');
-        return outMin >= endMin;
-      }
-    });
-
-    const presentDays = bonusDays.length;
+    let presentDays = 0;
+    for (const rec of Object.values(allRecords)) {
+      if (rec.date < startStr || rec.date > endStr) continue;
+      presentDays += this.attendanceSvc.getFullDaysEarned(rec);
+    }
 
     // Tiered bonus calculation
     const halfBonusEligible = presentDays >= this.HALF_BONUS_THRESHOLD;
@@ -82,6 +65,30 @@ export class BonusService {
     const isEligible = fullBonusEligible;
     const percentage = Math.min(100, Math.round((presentDays / this.FULL_BONUS_THRESHOLD) * 100));
 
+    // Dynamic Monthly Target based on the current month's calendar days and public holidays
+    const currentYear = targetDate.getFullYear();
+    const currentMonth = targetDate.getMonth() + 1;
+    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+    let currentMonthWorkingDays = 0;
+    let currentMonthHolidays = 0;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayOfWeek = new Date(dateStr + 'T00:00:00').getDay();
+      if (dayOfWeek === 0) continue; // Sunday off
+      if (this.holidaySvc.isHoliday(dateStr)) {
+        currentMonthHolidays++;
+        continue;
+      }
+      currentMonthWorkingDays++;
+    }
+
+    // Benchmark ratio: 20 days required in a standard 25 working-day month (0.80)
+    // Half bonus: 16.7 days required in a standard 25 working-day month (~0.667)
+    const monthlyFullTarget = parseFloat((currentMonthWorkingDays * 0.8).toFixed(1));
+    const monthlyHalfTarget = parseFloat((currentMonthWorkingDays * (16.7 / 25.0)).toFixed(1));
+    const monthName = targetDate.toLocaleDateString('en-US', { month: 'long' });
+
     return {
       presentDays,
       requiredDays,
@@ -97,7 +104,13 @@ export class BonusService {
       fullBonusEligible,
       daysUntilHalfBonus,
       daysUntilFullBonus,
-      currentBonus
+      currentBonus,
+      // Dynamic monthly targets
+      currentMonthWorkingDays,
+      currentMonthHolidays,
+      monthName,
+      monthlyFullTarget,
+      monthlyHalfTarget
     };
   }
 

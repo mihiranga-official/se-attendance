@@ -58,6 +58,9 @@
     <button [class.active]="activeTab === 'events'" (click)="activeTab = 'events'">
       📅 Special Events
     </button>
+    <button [class.active]="activeTab === 'analytics'" (click)="activeTab = 'analytics'" style="border-left: 2px solid var(--primary); font-weight: 700;">
+      📊 Date Range & 240 Target
+    </button>
   </div>
 
   @if (isLoading()) {
@@ -93,10 +96,16 @@
                   <td><span class="role-badge" [class]="user.role">{{ user.role }}</span></td>
                   <td>{{ user.dob ? (user.dob | date:'mediumDate') : '—' }}</td>
                   <td>{{ user.createdAt ? (user.createdAt | date:'mediumDate') : '—' }}</td>
-                  <td>
-                    <button class="btn-action-edit" (click)="editUser(user)" title="Edit Employee Profile">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                    </button>
+                  <td style="text-align: right;">
+                    <div style="display: inline-flex; gap: 6px; justify-content: flex-end;">
+                      <button class="btn-secondary" (click)="openUserAnalytics(user.uid)" style="padding: 5px 10px; font-size: 0.8rem; width: auto; margin: 0; display: inline-flex; align-items: center; gap: 4px;" title="View Custom Date Range & 240-Day Progress">
+                        <span>📊 Range Totals</span>
+                      </button>
+                      <button class="btn-primary" (click)="editUser(user)" style="padding: 5px 12px; font-size: 0.8rem; width: auto; margin: 0; display: inline-flex; align-items: center; gap: 6px;" title="Edit Employee Profile">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        <span>Edit Profile</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               }
@@ -107,16 +116,80 @@
 
       <!-- Leaves Tab -->
       @if (activeTab === 'leaves') {
+        <!-- Team Leave Quotas Management (Requirement 8) -->
+        <div style="margin-bottom: 2rem; background: rgba(30, 41, 59, 0.4); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3 style="margin: 0 0 4px 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Team Leave Quotas & Allocation</h3>
+              <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Manage 21-Day Annual Leave Quotas (7 Casual + 14 Annual) for each team member.</p>
+            </div>
+            <button class="btn-primary" (click)="applyDefaultQuotasToAll()" style="font-size: 0.8rem; padding: 6px 14px; width: auto; margin: 0;">
+              <span>Set Standard Quotas for All (21 Days: 7/14)</span>
+            </button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>🏖️ Casual (7)</th>
+                  <th>📅 Annual (14)</th>
+                  <th>🌟 Total Quota (21 Days)</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (user of users(); track user.uid) {
+                  <tr>
+                    <td class="name-cell">
+                      <strong>{{ user.name }}</strong>
+                      <span style="font-size: 0.75rem; color: var(--text-secondary); display: block;">{{ user.email }}</span>
+                    </td>
+                    <td>
+                      <span style="color: var(--text-main); font-weight: 600;">
+                        {{ ((user.leaveBalances?.casual?.allocated ?? 7) - (user.leaveBalances?.casual?.used ?? 0)).toFixed(1) }} / {{ user.leaveBalances?.casual?.allocated ?? 7 }}
+                      </span>
+                      <span style="font-size: 0.75rem; color: var(--text-secondary); display: block;">Used: {{ (user.leaveBalances?.casual?.used ?? 0).toFixed(1) }}</span>
+                    </td>
+                    <td>
+                      <span style="color: var(--text-main); font-weight: 600;">
+                        {{ ((user.leaveBalances?.annual?.allocated ?? 14) - (user.leaveBalances?.annual?.used ?? 0)).toFixed(1) }} / {{ user.leaveBalances?.annual?.allocated ?? 14 }}
+                      </span>
+                      <span style="font-size: 0.75rem; color: var(--text-secondary); display: block;">Used: {{ (user.leaveBalances?.annual?.used ?? 0).toFixed(1) }}</span>
+                    </td>
+                    <td>
+                      <span style="color: #34d399; font-weight: 700;">
+                        {{ (((user.leaveBalances?.casual?.allocated ?? 7) + (user.leaveBalances?.annual?.allocated ?? 14)) - ((user.leaveBalances?.casual?.used ?? 0) + (user.leaveBalances?.annual?.used ?? 0))).toFixed(1) }} / {{ (user.leaveBalances?.casual?.allocated ?? 7) + (user.leaveBalances?.annual?.allocated ?? 14) }}
+                      </span>
+                      <span style="font-size: 0.75rem; color: var(--text-secondary); display: block;">Used: {{ ((user.leaveBalances?.casual?.used ?? 0) + (user.leaveBalances?.annual?.used ?? 0)).toFixed(1) }} days</span>
+                    </td>
+                    <td style="text-align: right;">
+                      <button class="btn-primary" (click)="openQuotaModal(user)" style="padding: 6px 14px; font-size: 0.8rem; width: auto; margin: 0; display: inline-flex; align-items: center; gap: 6px;" title="Edit Leave Quota">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        <span>Edit Quotas</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Leave Request History</h3>
         <div class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
                 <th>Employee</th>
                 <th>Date</th>
-                <th>Type</th>
+                <th>Category</th>
+                <th>Duration</th>
                 <th>Reason</th>
                 <th>Coverage Status</th>
                 <th>Status</th>
+                <th style="text-align: right;">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -125,26 +198,38 @@
                   <tr>
                     <td>{{ userLeaves.userName }}</td>
                     <td>{{ leave.date }}</td>
+                    <td>
+                      <span class="badge" 
+                        [class.badge-info]="leave.leaveCategory === 'casual'"
+                        [class.badge-success]="leave.leaveCategory === 'annual' || leave.leaveCategory === 'total'"
+                        [class.badge-secondary]="!leave.leaveCategory || leave.leaveCategory === 'other'">
+                        {{ leave.leaveCategory === 'casual' ? '🏖️ Casual' : leave.leaveCategory === 'annual' ? '📅 Annual' : leave.leaveCategory === 'total' ? '🌟 Standard Leave' : 'Unpaid/Other' }}
+                      </span>
+                    </td>
                     <td><span class="type-label" [class]="leave.type">{{ leave.type }}</span></td>
                     <td class="reason-cell" [title]="leave.reason">{{ leave.reason }}</td>
                     <td>
-                      @if (leave.isCovered) {
-                        @if ((leave.coveredHours ?? 0) < (leave.type === 'full' ? 9 : 4.5)) {
-                          <span class="badge badge-warning" style="display: inline-flex; align-items: center; gap: 6px;">
-                            <span class="dot" style="width: 6px; height: 6px; border-radius: 50%; background: #d97706; display: inline-block;"></span>
-                            Covered ({{ leave.coveredHours ?? 0 }}/{{ leave.type === 'full' ? 9 : 4.5 }}h) on {{ leave.coveredByDate | date:'MMM d' }}
-                          </span>
-                        } @else {
-                          <span class="badge badge-success" style="display: inline-flex; align-items: center; gap: 6px;">
-                            <span class="dot" style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
-                            Fully Covered on {{ leave.coveredByDate | date:'MMM d' }}
-                          </span>
-                        }
+                      @if (leave.isOvertimeCovered || leave.isCovered) {
+                        <span class="badge badge-success" style="display: inline-flex; align-items: center; gap: 6px;">
+                          <span class="dot" style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+                          ⚡ Covered by Overtime {{ leave.coveredByDate ? '(' + leave.coveredByDate + ')' : '' }}
+                        </span>
                       } @else {
-                        <span class="badge badge-secondary">Not Covered</span>
+                        <span class="badge badge-secondary">Deducted from Quota</span>
                       }
                     </td>
                     <td><span class="badge badge-info">Recorded</span></td>
+                    <td style="text-align: right; white-space: nowrap;">
+                      <div style="display: inline-flex; gap: 6px; justify-content: flex-end;">
+                        <button class="btn-secondary" (click)="openEditLeaveModal(userLeaves.uid, userLeaves.userName, leave)" style="padding: 4px 10px; font-size: 0.75rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Edit this leave entry">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                          <span>Edit</span>
+                        </button>
+                        <button class="btn-danger-sm" (click)="deleteLeaveAsAdmin(userLeaves.uid, leave)" style="padding: 4px 10px; font-size: 0.75rem; border-radius: 6px;" title="Delete this leave entry and restore quota">
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 }
               }
@@ -166,6 +251,7 @@
                 <th>Hours</th>
                 <th>OT</th>
                 <th>Status</th>
+                <th style="text-align: right;">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -179,6 +265,17 @@
                     <td>{{ rec.workedHours ? rec.workedHours.toFixed(1) + 'h' : '—' }}</td>
                     <td>{{ rec.otHours ? rec.otHours.toFixed(1) + 'h' : '0h' }}</td>
                     <td><span class="badge {{ getStatusClass(rec.status) }}">{{ rec.status }}</span></td>
+                    <td style="text-align: right; white-space: nowrap;">
+                      <div style="display: inline-flex; gap: 6px; justify-content: flex-end;">
+                        <button class="btn-secondary" (click)="editAttendanceRecord(userAttend.uid, rec)" style="padding: 4px 10px; font-size: 0.75rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Edit this attendance entry">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                          <span>Edit</span>
+                        </button>
+                        <button class="btn-danger-sm" (click)="deleteAttendanceRecord(userAttend.uid, rec.date, userAttend.userName)" style="padding: 4px 10px; font-size: 0.75rem; border-radius: 6px;" title="Delete this attendance entry">
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 }
               }
@@ -424,6 +521,62 @@
               </div>
             }
           </div>
+        </div>
+      }
+
+      <!-- Custom Date Range & 240-Day Annual Target Tab (Requirements 1 & 3) -->
+      @if (activeTab === 'analytics') {
+        <div class="analytics-tab-container">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; background: rgba(255, 255, 255, 0.02); padding: 1rem 1.25rem; border-radius: 12px; border: 1px solid var(--border);">
+            <div>
+              <h2 style="margin: 0 0 4px 0; font-size: 1.2rem; font-weight: 700; color: var(--text-main);">
+                Employee Date Range Totals & 240-Day Target Analysis
+              </h2>
+              <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
+                Select any employee to calculate cumulative attendance, leave days, Sunday work, OT hours, and projected completion date.
+              </p>
+            </div>
+
+            <!-- Employee Selector Dropdown -->
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">Selected Employee:</label>
+              <select [ngModel]="selectedAnalyticsUser()" (ngModelChange)="selectedAnalyticsUser.set($event)" class="input-field" style="min-width: 240px; margin: 0; padding: 6px 12px; font-weight: 600;">
+                <option value="" disabled>-- Select an Employee --</option>
+                @for (u of users(); track u.uid) {
+                  <option [value]="u.uid">{{ u.name }} ({{ u.email }})</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          @if (!selectedAnalyticsUser()) {
+            <div class="empty-state" style="padding: 3rem 1.5rem; text-align: center;">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style="color: var(--primary); margin-bottom: 1rem;">
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+              </svg>
+              <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);">Choose an Employee to Analyze</h3>
+              <p style="color: var(--text-secondary); max-width: 480px; margin: 0 auto 1.5rem auto; font-size: 0.85rem;">
+                Click any team member below or use the dropdown above to load their 240-day target projection and calculate custom period totals.
+              </p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 700px; margin: 0 auto;">
+                @for (u of users(); track u.uid) {
+                  <button class="preset-pill" (click)="selectedAnalyticsUser.set(u.uid)" style="padding: 6px 14px; font-size: 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; color: var(--text-main);">
+                    👤 {{ u.name }}
+                  </button>
+                }
+              </div>
+            </div>
+          } @else {
+            <!-- Annual 240-Day Attendance Card for Selected Employee -->
+            <div style="margin-bottom: 1.5rem;">
+              <app-annual-target-card [uid]="selectedAnalyticsUser()"></app-annual-target-card>
+            </div>
+
+            <!-- Custom Date Range Aggregation Calculator for Selected Employee -->
+            <div>
+              <app-date-range-summary [uid]="selectedAnalyticsUser()" [userName]="getSelectedUserName()"></app-date-range-summary>
+            </div>
+          }
         </div>
       }
     </div>
@@ -686,6 +839,105 @@
           <button class="btn-primary" (click)="saveUserEdit()" [disabled]="isSavingEdit()">
             @if (isSavingEdit()) { <span class="spinner-sm"></span> }
             <span>Save Changes</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Edit Employee Leave Modal -->
+  @if (showEditLeaveModal()) {
+    <div class="modal-backdrop" (click)="showEditLeaveModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Edit Leave &mdash; {{ editingLeaveUserName }}</h3>
+          <button class="close-btn" (click)="showEditLeaveModal.set(false)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">Modify employee leave details. Quota balances will adjust automatically based on your changes.</p>
+          
+          <div class="form-group">
+            <label>Leave Date</label>
+            <input type="date" [(ngModel)]="editingLeaveDate" class="input-field">
+          </div>
+
+          <div class="form-group">
+            <label>Leave Category</label>
+            <select [(ngModel)]="editingLeaveCategory" class="input-field">
+              <option value="casual">🏖️ Casual Leave (7 quota)</option>
+              <option value="annual">📅 Annual Leave (14 quota)</option>
+              <option value="total">🌟 Standard Leave (Total 21-Day Quota)</option>
+              <option value="other">Unpaid / Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Leave Duration / Type</label>
+            <select [(ngModel)]="editingLeaveType" class="input-field">
+              <option value="full">Full Day (1.0 day quota / 9h)</option>
+              <option value="half-morning">Half Day - Morning (0.5 day quota / 4.5h)</option>
+              <option value="half-afternoon">Half Day - Afternoon (0.5 day quota / 4.5h)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Reason / Notes</label>
+            <input type="text" [(ngModel)]="editingLeaveReason" class="input-field" placeholder="Medical, Personal, etc.">
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 12px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-weight: 600; color: #10b981;">
+              <input type="checkbox" [(ngModel)]="editingLeaveIsOvertimeCovered" style="width: 18px; height: 18px; cursor: pointer;">
+              <span>⚡ Cover with Overtime / Covering Day (Quota Preserved)</span>
+            </label>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; margin-left: 28px;">
+              When checked, this leave will NOT deduct from the employee's leave quota; the hours will instead be subtracted from their overtime pool.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="showEditLeaveModal.set(false)">Cancel</button>
+          <button class="btn-primary" (click)="saveLeaveEdit()" [disabled]="isSavingLeaveEdit()">
+            @if (isSavingLeaveEdit()) { <span class="spinner-sm"></span> }
+            <span>Save Leave Changes</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Edit Leave Quota Modal -->
+  @if (showQuotaModal()) {
+    <div class="modal-backdrop" (click)="showQuotaModal.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Edit Leave Quota &mdash; {{ quotaEditName() }}</h3>
+          <button class="close-btn" (click)="showQuotaModal.set(false)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">Set allocated days for the annual leave quota (Casual 7 + Annual 14 = 21 Days Total). Deduction is automatic when leaves are recorded.</p>
+          <div class="form-group">
+            <label>🏖️ Casual Leave Quota (Days)</label>
+            <input type="number" step="0.5" min="0" max="60" [(ngModel)]="quotaCasual" class="input-field" placeholder="7">
+          </div>
+          <div class="form-group">
+            <label>📅 Annual Leave Quota (Days)</label>
+            <input type="number" step="0.5" min="0" max="60" [(ngModel)]="quotaAnnual" class="input-field" placeholder="14">
+          </div>
+          <div style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; padding: 10px 12px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 700; color: #818cf8;">🌟 Combined Total Leave:</span>
+            <strong style="color: #34d399; font-size: 1.1rem;">{{ ((quotaCasual || 0) + (quotaAnnual || 0)) }} Days</strong>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="showQuotaModal.set(false)">Cancel</button>
+          <button class="btn-primary" (click)="saveQuota()" [disabled]="isSavingQuota()">
+            @if (isSavingQuota()) { <span class="spinner-sm"></span> }
+            <span>Save Quotas</span>
           </button>
         </div>
       </div>

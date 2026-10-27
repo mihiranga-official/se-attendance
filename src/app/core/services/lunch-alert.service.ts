@@ -53,7 +53,7 @@ export class LunchAlertService {
     if (!user) return;
     
     const profile = this.auth.userProfile();
-    if (!profile || profile.role === 'admin') return;
+    if (!profile || profile.role === 'admin' || !profile.isFoodSubscribed) return;
 
     const uid = user.uid;
     

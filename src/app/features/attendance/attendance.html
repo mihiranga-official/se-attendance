@@ -1,8 +1,21 @@
 <div class="attendance-page">
   <div class="page-header">
     <div class="header-content">
-      <h1 class="page-title">Attendance Calendar</h1>
-      <p class="page-subtitle">Track and manage your daily check-in/out records</p>
+      <div class="title-with-badge">
+        <h1 class="page-title">Attendance Calendar</h1>
+        <div class="working-days-pill" title="Total working days in {{ currentMonthName() }} {{ currentYear() }} (excluding Sundays and holidays)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span><strong>{{ totalWorkingDays() }}</strong> Total Working Days</span>
+        </div>
+      </div>
+      <p class="page-subtitle">
+        <span>Track and manage your daily check-in/out records here</span>
+        <span class="subtitle-separator">&bull;</span>
+        <span class="subtitle-working-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <strong>{{ totalWorkingDays() }} Total Working Days</strong> in {{ currentMonthName() }} {{ currentYear() }}
+        </span>
+      </p>
     </div>
 
     <div class="calendar-nav">
@@ -12,13 +25,75 @@
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
       </button>
-      <h2 class="current-month">{{ currentMonthName() }} {{ currentYear() }}</h2>
+      <div class="nav-center-text">
+        <h2 class="current-month">{{ currentMonthName() }} {{ currentYear() }}</h2>
+        <span class="nav-working-days-tag">{{ totalWorkingDays() }} Scheduled Working Days</span>
+      </div>
       <button class="btn-icon" (click)="nextMonth()" title="Next Month">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="9 18 15 12 9 6"></polyline>
         </svg>
       </button>
+    </div>
+  </div>
+
+  <!-- Monthly Working Days & Overview KPI Bar -->
+  <div class="month-kpi-bar">
+    <div class="kpi-card highlight-card">
+      <div class="kpi-icon-box blue-box">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-title">Total Working Days</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ totalWorkingDays() }}</span>
+          <span class="kpi-sub">Days in {{ currentMonthName() }}</span>
+        </div>
+        <span class="kpi-footer-note">Excludes {{ monthlySundaysCount() }} Sundays &bull; {{ monthlyHolidaysCount() }} Poya / Holidays</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box green-box">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-title">Attended Days</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ monthlyAttendedDays() }}</span>
+          <span class="kpi-sub">/ {{ totalWorkingDays() }} Days</span>
+        </div>
+        <span class="kpi-footer-note">{{ monthlyAttendanceRate() }}% attendance completion</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box amber-box">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-title">Total Overtime (OT)</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ monthlyOTHours() }}h</span>
+          <span class="kpi-sub">Net Overtime</span>
+        </div>
+        <span class="kpi-footer-note">Overnight & extra hours worked</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box purple-box">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-title">Leaves Taken</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ monthlyLeaveDays() }}</span>
+          <span class="kpi-sub">Approved Days</span>
+        </div>
+        <span class="kpi-footer-note">Leaves logged this month</span>
+      </div>
     </div>
   </div>
 
@@ -35,6 +110,11 @@
         @if (day.record || day.leave || (day.coveringFor && day.coveringFor.length > 0)) {
         <div class="day-stats" [class.is-24h]="day.record?.is24HourShift">
           @if (day.record?.status === 'present') {
+            @if (day.overnightEndRecord && day.record && day.record.date !== day.overnightEndRecord.date) {
+              <div class="overnight-end-pill" style="font-size: 0.68rem; font-weight: 700; color: #f59e0b; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 4px; padding: 2px 4px; margin-bottom: 3px; display: flex; align-items: center; gap: 4px;" [title]="'Overnight shift ended today at ' + day.overnightEndRecord.checkOut">
+                <span>🌙 Out {{ day.overnightEndRecord.checkOut }}</span>
+              </div>
+            }
             @if (day.record?.is24HourShift) {
               @if (day.isStart) {
                 <div class="status-marker start">
@@ -239,6 +319,16 @@
           <div class="alert alert-success">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
             <span>{{ saveMsg() }}</span>
+          </div>
+        }
+
+        @if (selectedDay()?.overnightEndRecord && selectedDay()?.record?.date !== selectedDay()?.overnightEndRecord?.date) {
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.25rem;">🌙</span>
+            <div style="font-size: 0.82rem; color: var(--text-main);">
+              <strong>Overnight Shift Ended Today:</strong> Started on {{ selectedDay()?.overnightEndRecord?.date }} and checked out at <strong>{{ selectedDay()?.overnightEndRecord?.checkOut }}</strong>.
+              <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px;">The fields below represent this day's separate attendance session.</div>
+            </div>
           </div>
         }
 

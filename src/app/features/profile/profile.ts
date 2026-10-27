@@ -6,6 +6,8 @@ import { database } from '../../core/firebase.config';
 import { ref, set, push, onValue, off, update } from 'firebase/database';
 import { CustomDialogService } from '../../core/services/custom-dialog.service';
 
+import { UserService } from '../../core/services/user.service';
+
 export interface PersonalEvent {
   id: string;
   title: string;
@@ -23,6 +25,7 @@ export interface PersonalEvent {
 export class ProfileComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   private dialogSvc = inject(CustomDialogService);
+  private userSvc = inject(UserService);
 
   // Profile data
   name = signal('');
@@ -32,6 +35,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   createdAt = signal('');
   photoUrl = signal('');
   isUploadingPhoto = signal(false);
+  isUpdatingFood = signal(false);
 
   // Personal Events state
   personalEvents = signal<PersonalEvent[]>([]);
@@ -214,5 +218,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
   get initials(): string {
     const nameVal = this.name() || 'U';
     return nameVal.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  async toggleFoodSubscription() {
+    const user = this.auth.currentUser();
+    if (!user) return;
+    const current = this.auth.userProfile()?.isFoodSubscribed ?? false;
+    this.isUpdatingFood.set(true);
+    try {
+      await this.userSvc.setFoodSubscription(user.uid, !current);
+      await this.auth.loadUserProfile(user.uid);
+    } catch (e: any) {
+      alert('Failed to update food subscription: ' + e.message);
+    } finally {
+      this.isUpdatingFood.set(false);
+    }
   }
 }

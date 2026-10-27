@@ -48,21 +48,27 @@
           </svg>
           <span>Monthly Summary</span>
         </a>
-        <a routerLink="/performance-metrics" routerLinkActive="active" (click)="closeSidebar()" class="nav-item" id="nav-performance">
+        <a routerLink="/performance-metrics" routerLinkActive="active" (click)="closeSidebar()" class="nav-item"
+          id="nav-performance">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/>
+            <path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z" />
           </svg>
           <span>Performance Analytics</span>
         </a>
-        <a routerLink="/food-request" routerLinkActive="active" (click)="closeSidebar()" class="nav-item" id="nav-food-request">
+        @if (auth.userProfile()?.isFoodSubscribed) {
+        <a routerLink="/food-request" routerLinkActive="active" (click)="closeSidebar()" class="nav-item"
+          id="nav-food-request">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+            <path
+              d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />
           </svg>
           <span>Food Request</span>
         </a>
+        }
         <a routerLink="/profile" routerLinkActive="active" (click)="closeSidebar()" class="nav-item" id="nav-profile">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            <path
+              d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
           </svg>
           <span>My Profile</span>
         </a>
@@ -97,46 +103,51 @@
         </div>
         <div class="promo-tag">
           <span class="pulse-green-dot"></span>
-          <span>Official App v1.1.1</span>
+          <span>Official App v2</span>
         </div>
       </div>
     </div>
 
     <!-- Monetized Ad Slot (Disabled, can be enabled by changing false to true) -->
     @if (false) {
-      <div class="sidebar-brand-promo">
-        <div class="brand-promo-card ad-banner-card" [style.border-color]="ads[currentAdIndex()].color + '55'">
-          <span class="ad-badge">SPONSORED AD</span>
-          <div class="promo-logo-outer" [style.background]="'linear-gradient(135deg, ' + ads[currentAdIndex()].color + ' 0%, #1e293b 100%)'">
-            <div class="promo-logo-inner">
-              <span class="ad-icon">{{ ads[currentAdIndex()].image }}</span>
-            </div>
-          </div>
-          <div class="promo-content">
-            <span class="promo-title ad-title">{{ ads[currentAdIndex()].title }}</span>
-            <p class="promo-description ad-desc">{{ ads[currentAdIndex()].description }}</p>
-          </div>
-          <a [href]="ads[currentAdIndex()].link" target="_blank" class="promo-tag ad-cta" (click)="onAdClick(ads[currentAdIndex()], $event)" [style.background]="ads[currentAdIndex()].color" [style.color]="'#fff'">
-            <span>{{ ads[currentAdIndex()].cta }}</span>
-          </a>
-          <div class="ad-footer-row">
-            <div class="ad-footer-branding">
-              <img src="logo-early.png" class="ad-footer-logo" alt="Attendance Logo" />
-              <span class="ad-footer-text">Attendance</span>
-            </div>
-            <a href="mailto:mihiranga.office@gmail.com?subject=Advertise%20on%20SE-Attendance%20System" class="sponsor-link">Advertise & Earn &rarr;</a>
+    <div class="sidebar-brand-promo">
+      <div class="brand-promo-card ad-banner-card" [style.border-color]="ads[currentAdIndex()].color + '55'">
+        <span class="ad-badge">SPONSORED AD</span>
+        <div class="promo-logo-outer"
+          [style.background]="'linear-gradient(135deg, ' + ads[currentAdIndex()].color + ' 0%, #1e293b 100%)'">
+          <div class="promo-logo-inner">
+            <span class="ad-icon">{{ ads[currentAdIndex()].image }}</span>
           </div>
         </div>
+        <div class="promo-content">
+          <span class="promo-title ad-title">{{ ads[currentAdIndex()].title }}</span>
+          <p class="promo-description ad-desc">{{ ads[currentAdIndex()].description }}</p>
+        </div>
+        <a [href]="ads[currentAdIndex()].link" target="_blank" class="promo-tag ad-cta"
+          (click)="onAdClick(ads[currentAdIndex()], $event)" [style.background]="ads[currentAdIndex()].color"
+          [style.color]="'#fff'">
+          <span>{{ ads[currentAdIndex()].cta }}</span>
+        </a>
+        <div class="ad-footer-row">
+          <div class="ad-footer-branding">
+            <img src="logo-early.png" class="ad-footer-logo" alt="Attendance Logo" />
+            <span class="ad-footer-text">Attendance</span>
+          </div>
+          <a href="mailto:mihiranga.office@gmail.com?subject=Advertise%20on%20SE-Attendance%20System"
+            class="sponsor-link">Advertise & Earn &rarr;</a>
+        </div>
       </div>
+    </div>
     }
 
     <div class="sidebar-footer">
       <div class="user-info">
         <div class="avatar-sm" style="overflow: hidden; display: flex; align-items: center; justify-content: center;">
           @if (auth.userProfile()?.photoUrl) {
-            <img [src]="auth.userProfile()?.photoUrl" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+          <img [src]="auth.userProfile()?.photoUrl" alt="Avatar"
+            style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
           } @else {
-            {{ initials }}
+          {{ initials }}
           }
         </div>
         <div class="user-details">
@@ -183,73 +194,81 @@
 
         <!-- Notification Center Dropdown -->
         <div class="notification-container">
-          <button class="notification-bell" (click)="toggleNotifications()" title="Notifications" id="btn-notifications">
+          <button class="notification-bell" (click)="toggleNotifications()" title="Notifications"
+            id="btn-notifications">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              <path
+                d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
             </svg>
             @if (unreadCount() > 0) {
-              <span class="bell-badge">{{ unreadCount() }}</span>
+            <span class="bell-badge">{{ unreadCount() }}</span>
             }
           </button>
 
           @if (notificationsOpen()) {
-            <div class="notification-overlay" (click)="closeNotifications()"></div>
-            <div class="notification-dropdown slide-in-top">
-              <div class="dropdown-header-row">
-                <span class="dropdown-title">Notifications</span>
-                @if (unreadCount() > 0) {
-                  <button class="btn-text-action" (click)="markAllAsRead()">Mark all read</button>
-                }
-              </div>
-              <div class="dropdown-divider"></div>
-              
-              <div class="notification-scroll-list">
-                @if (notifications().length === 0) {
-                  <div class="notifications-empty">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="36" height="36" style="color: var(--text-muted);">
-                      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                    </svg>
-                    <p>All caught up! No notifications.</p>
-                  </div>
-                } @else {
-                  @for (n of notifications(); track n.id) {
-                    <div class="notification-item" [class.unread]="!n.read" (click)="markAsRead(n.id)">
-                      <div class="item-icon" [class]="n.type">
-                        @if (n.type === 'event') { 📅 }
-                        @else if (n.type === 'system') { ⚙️ }
-                        @else { 🔔 }
-                      </div>
-                      <div class="item-body">
-                        <div class="item-title">{{ n.title }}</div>
-                        <div class="item-message">{{ n.message }}</div>
-                        <div class="item-time">{{ getRelativeTime(n.timestamp) }}</div>
-                      </div>
-                      <button class="btn-clear-single" (click)="clearNotification(n.id, $event)" title="Dismiss">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                        </svg>
-                      </button>
-                    </div>
-                  }
-                }
-              </div>
-              
-              @if (notifications().length > 0) {
-                <div class="dropdown-divider"></div>
-                <div class="dropdown-footer-row">
-                  <button class="btn-clear-all" (click)="clearAllNotifications()">Clear All</button>
-                </div>
+          <div class="notification-overlay" (click)="closeNotifications()"></div>
+          <div class="notification-dropdown slide-in-top">
+            <div class="dropdown-header-row">
+              <span class="dropdown-title">Notifications</span>
+              @if (unreadCount() > 0) {
+              <button class="btn-text-action" (click)="markAllAsRead()">Mark all read</button>
               }
             </div>
+            <div class="dropdown-divider"></div>
+
+            <div class="notification-scroll-list">
+              @if (notifications().length === 0) {
+              <div class="notifications-empty">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="36" height="36"
+                  style="color: var(--text-muted);">
+                  <path
+                    d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                </svg>
+                <p>All caught up! No notifications.</p>
+              </div>
+              } @else {
+              @for (n of notifications(); track n.id) {
+              <div class="notification-item" [class.unread]="!n.read" (click)="markAsRead(n.id)">
+                <div class="item-icon" [class]="n.type">
+                  @if (n.type === 'event') { 📅 }
+                  @else if (n.type === 'system') { ⚙️ }
+                  @else { 🔔 }
+                </div>
+                <div class="item-body">
+                  <div class="item-title">{{ n.title }}</div>
+                  <div class="item-message">{{ n.message }}</div>
+                  <div class="item-time">{{ getRelativeTime(n.timestamp) }}</div>
+                </div>
+                <button class="btn-clear-single" (click)="clearNotification(n.id, $event)" title="Dismiss">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14"
+                    height="14">
+                    <path
+                      d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                  </svg>
+                </button>
+              </div>
+              }
+              }
+            </div>
+
+            @if (notifications().length > 0) {
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-footer-row">
+              <button class="btn-clear-all" (click)="clearAllNotifications()">Clear All</button>
+            </div>
+            }
+          </div>
           }
         </div>
 
         <div class="user-dropdown-container">
-          <div class="topbar-avatar" (click)="toggleDropdown()" style="overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <div class="topbar-avatar" (click)="toggleDropdown()"
+            style="overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer;">
             @if (auth.userProfile()?.photoUrl) {
-              <img [src]="auth.userProfile()?.photoUrl" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+            <img [src]="auth.userProfile()?.photoUrl" alt="Avatar"
+              style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
             } @else {
-              {{ initials }}
+            {{ initials }}
             }
           </div>
 
@@ -257,11 +276,13 @@
           <div class="dropdown-overlay" (click)="closeDropdown()"></div>
           <div class="user-dropdown slide-in-top">
             <div class="dropdown-header">
-              <div class="avatar-md" style="overflow: hidden; display: flex; align-items: center; justify-content: center;">
+              <div class="avatar-md"
+                style="overflow: hidden; display: flex; align-items: center; justify-content: center;">
                 @if (auth.userProfile()?.photoUrl) {
-                  <img [src]="auth.userProfile()?.photoUrl" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+                <img [src]="auth.userProfile()?.photoUrl" alt="Avatar"
+                  style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
                 } @else {
-                  {{ initials }}
+                {{ initials }}
                 }
               </div>
               <div class="dropdown-user-info">
@@ -305,7 +326,8 @@
         <!-- Visual status ring representing security timeout -->
         <div class="status-indicator-ring">
           <div class="inner-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
               <line x1="12" y1="9" x2="12" y2="13"></line>
               <line x1="12" y1="17" x2="12.01" y2="17"></line>
@@ -314,8 +336,9 @@
         </div>
 
         <h3 class="modal-title-security">Session Expiring</h3>
-        <p class="modal-desc-security">You have been inactive for 15 minutes. To protect your data, you will be signed out automatically.</p>
-        
+        <p class="modal-desc-security">You have been inactive for 15 minutes. To protect your data, you will be signed
+          out automatically.</p>
+
         <!-- Premium Countdown Circle / Badge -->
         <div class="countdown-badge-wrapper">
           <span class="countdown-label">Automatic Logout In</span>
@@ -325,7 +348,9 @@
       <div class="modal-footer flex-center" style="gap: 12px;">
         <button class="btn-secondary" (click)="logout()">Sign Out</button>
         <button class="btn-primary btn-keep-session" (click)="inactivity.stayLoggedIn()">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" style="margin-right: 4px; vertical-align: middle;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"
+            style="margin-right: 4px; vertical-align: middle;">
             <path d="M20 6L9 17l-5-5"></path>
           </svg>
           Keep Session Active

@@ -101,7 +101,81 @@
         </div>
       </div>
       <div class="hero-right" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center;">
-        <div class="hero-cards-row" style="display: flex; gap: 1rem; flex-wrap: nowrap; justify-content: flex-end; width: auto; max-width: 100%;">
+        <div class="hero-cards-row" style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: flex-end; width: auto; max-width: 100%;">
+          <!-- Food Request Card: Strictly suppressed if not subscribed (Requirement 2) -->
+          @if (auth.userProfile()?.isFoodSubscribed) {
+          <div class="analytics-card" style="border-radius: 12px; padding: 1rem; width: 290px; min-width: 280px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid var(--border); background: var(--bg-card); margin: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.25rem;">🍽️</span>
+                <h4 class="card-title" style="font-size: 0.95rem; margin: 0; font-weight: 700; color: var(--text-main);">Daily Food Request</h4>
+              </div>
+              <span class="badge badge-success" style="font-size: 0.7rem; padding: 2px 8px;">
+                Subscribed
+              </span>
+            </div>
+            <div class="card-content" style="font-size: 0.8rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
+              <p style="margin: 0; line-height: 1.4;">
+                You are subscribed to the daily food request system.
+              </p>
+              <button 
+                class="btn-primary" 
+                (click)="toggleFoodSubscription()" 
+                [disabled]="isSubscribingFood()" 
+                style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; width: 100%; justify-content: center; margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);"
+              >
+                @if (isSubscribingFood()) {
+                  <span class="spinner"></span>
+                } @else {
+                  <span>Unsubscribe from Food</span>
+                }
+              </button>
+            </div>
+          </div>
+          }
+
+          <!-- Leave Balances & Quota Card (Requirement 8) -->
+          <div class="analytics-card" style="border-radius: 12px; padding: 1rem; width: 300px; min-width: 290px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid var(--border); background: var(--bg-card); margin: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="card-icon" style="color: #6366f1;">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                    <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
+                  </svg>
+                </div>
+                <h4 class="card-title" style="font-size: 0.95rem; margin: 0; font-weight: 700; color: var(--text-main);">Total Leave Quota & Balances</h4>
+              </div>
+              <span class="badge badge-success" style="font-size: 0.7rem; padding: 2px 8px;">
+                21 Days Total
+              </span>
+            </div>
+            <div class="card-content" style="font-size: 0.8rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
+              <div style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 700; color: #818cf8;">🌟 Total Leave Balance:</span>
+                <strong style="font-size: 0.9rem; color: #34d399;">
+                  {{ (((leaveBalances()?.casual?.allocated || 7) + (leaveBalances()?.annual?.allocated || 14)) - ((leaveBalances()?.casual?.used || 0) + (leaveBalances()?.annual?.used || 0))).toFixed(1) }} / {{ (leaveBalances()?.casual?.allocated || 7) + (leaveBalances()?.annual?.allocated || 14) }} left
+                </strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;">
+                <span>🏖️ Casual Leave (7):</span>
+                <strong style="color: var(--text-main);">
+                  {{ ((leaveBalances()?.casual?.allocated || 7) - (leaveBalances()?.casual?.used || 0)).toFixed(1) }} / {{ leaveBalances()?.casual?.allocated || 7 }} left
+                </strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;">
+                <span>📅 Annual Leave (14):</span>
+                <strong style="color: var(--text-main);">
+                  {{ ((leaveBalances()?.annual?.allocated || 14) - (leaveBalances()?.annual?.used || 0)).toFixed(1) }} / {{ leaveBalances()?.annual?.allocated || 14 }} left
+                </strong>
+              </div>
+              @if (monthlySummary()?.overtimeCoveredLeaves && monthlySummary()!.overtimeCoveredLeaves! > 0) {
+                <div style="margin-top: 4px; padding: 4px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.75rem; font-weight: 600; text-align: center;">
+                  ⚡ {{ monthlySummary()?.overtimeCoveredLeaves }} leaves covered by Overtime (Quota Saved!)
+                </div>
+              }
+            </div>
+          </div>
+
           @if (hasLeavesAndOvertime) {
           <div class="analytics-card" [class.success-card]="netOvertimeBalance >= 0" [class.warning-card]="netOvertimeBalance < 0" style="border-radius: 12px; padding: 1rem; width: 300px; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid var(--border); background: var(--bg-card); margin: 0;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
@@ -217,6 +291,11 @@
     </div>
   }
 
+  <!-- Mandatory 240-Day Annual Attendance Tracking & Projection Module (Requirement 3) -->
+  <div class="annual-target-section" style="margin-bottom: 1.5rem;">
+    <app-annual-target-card></app-annual-target-card>
+  </div>
+
   <!-- Main Content Grid -->
   <div class="dashboard-main-grid">
     <!-- Left Column: Primary Attendance Status -->
@@ -309,12 +388,33 @@
           </div>
           <div class="stat-info">
             <span class="stat-value">{{ monthlySummary()?.totalOTHours ?? 0 }}h</span>
-            <span class="stat-label">Overtime Hours</span>
+            <span class="stat-label">Net Overtime Hours</span>
+            @if (monthlySummary()?.coveredHoursDeducted && monthlySummary()!.coveredHoursDeducted! > 0) {
+              <span style="font-size: 0.7rem; color: #f87171; display: block; margin-top: 2px;">
+                -{{ monthlySummary()?.coveredHoursDeducted }}h (Covering leaves)
+              </span>
+            }
           </div>
           <!-- Hover Popup Detail -->
           <div class="hover-popup">
             <h4>Overtime Detail</h4>
             <div class="popup-scroll">
+              @if (monthlySummary()?.coveredHoursDeducted && monthlySummary()!.coveredHoursDeducted! > 0) {
+                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; font-size: 0.75rem;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                    <span>Gross OT Earned:</span>
+                    <strong>+{{ monthlySummary()?.grossOTHours }}h</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; color: #f87171; margin-bottom: 2px;">
+                    <span>Covering Day Deduction:</span>
+                    <strong>-{{ monthlySummary()?.coveredHoursDeducted }}h</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2px; font-weight: 700; color: #10b981;">
+                    <span>Net Available OT:</span>
+                    <span>{{ monthlySummary()?.totalOTHours }}h</span>
+                  </div>
+                </div>
+              }
               @if (overtimeList().length === 0) {
                 <p class="no-records">No overtime hours logged this month.</p>
               } @else {
@@ -348,6 +448,11 @@
       </div>
     </div>
   }
+
+  <!-- Custom Date Range Aggregation Calculator (Requirement 1) -->
+  <div class="custom-range-section">
+    <app-date-range-summary></app-date-range-summary>
+  </div>
 
   <!-- Recent Activity -->
   <div class="section-card">

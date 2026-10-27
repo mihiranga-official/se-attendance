@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AttendanceRecord, MonthlySummary } from '../models/user.model';
+import { AttendanceRecord, MonthlySummary, DateRangeSummary } from '../models/user.model';
 import { AttendanceService } from './attendance.service';
 import { LeaveService } from './leave.service';
 
@@ -44,15 +44,30 @@ export class SummaryService {
       }
     });
 
+    // Requirement 6: If user did covering days, deduct covering hours from OT hours
+    let totalCoveredHoursDeduction = 0;
+    let overtimeCoveredLeaves = 0;
+    leaves.forEach(l => {
+      if (l.isCovered || l.isOvertimeCovered) {
+        overtimeCoveredLeaves++;
+        const requiredHours = l.type === 'full' ? 9 : 4.5;
+        const covered = l.coveredHours ?? requiredHours;
+        totalCoveredHoursDeduction += covered;
+      }
+    });
+
+    const grossOTHours = totalOTHours;
+    totalOTHours = Math.max(0, parseFloat((totalOTHours - totalCoveredHoursDeduction).toFixed(2)));
+
     for (const day of workingDays) {
       const rec = recordMap.get(day);
       const leave = leaves.find(l => l.date === day);
 
       if (leave) {
         let unpaidHoursForThisLeave = 0;
-        if (leave.isCovered) {
+        if (leave.isCovered || leave.isOvertimeCovered) {
           const requiredHours = leave.type === 'full' ? 9 : 4.5;
-          const coveredHours = leave.coveredHours ?? 0;
+          const coveredHours = leave.coveredHours ?? requiredHours;
           unpaidHoursForThisLeave = Math.max(0, requiredHours - coveredHours);
         } else {
           unpaidHoursForThisLeave = leave.type === 'full' ? 9 : 4.5;
@@ -64,7 +79,8 @@ export class SummaryService {
         continue;
       }
 
-      if (coveredDays.has(day)) {
+      // Requirement 2: If day was checkout day of 24h shift, but user arrived again on that day, do NOT skip!
+      if (coveredDays.has(day) && !rec?.checkIn) {
         // This day is handled by the previous day's 24h shift record
         continue;
       }
@@ -72,8 +88,11 @@ export class SummaryService {
       if (!rec || rec?.status === 'absent') {
         absentDays++;
       } else if (rec?.status === 'present' || rec?.status === 'Saturday Covered' || rec?.checkIn) {
-        const is24hMulti = rec?.is24HourShift && rec?.checkInDate !== rec?.checkOutDate;
-        presentDays += is24hMulti ? 2 : 1;
+        const fullDays = this.attendanceService.getFullDaysEarned(rec);
+        presentDays += fullDays;
+        if (fullDays === 0) {
+          incompleteDays++;
+        }
         
         if (rec?.isLate) {
           lateDays++;
@@ -84,11 +103,12 @@ export class SummaryService {
         }
         
         // Bonus calculation
-        const bonuses = rec?.bonusDaysEarned ?? (rec?.lostBonus ? 0 : 1);
-        const targetDays = is24hMulti ? 2 : 1;
+        const is24h = !!(rec?.is24HourShift && rec?.checkInDate && rec?.checkOutDate && rec?.checkInDate !== rec?.checkOutDate);
+        const targetDays = is24h ? 2 : 1;
+        const bonuses = rec?.bonusDaysEarned ?? fullDays;
         
         bonusEligibleDays += bonuses;
-        bonusLostDays += (targetDays - bonuses);
+        bonusLostDays += Math.max(0, targetDays - bonuses);
         
         if (rec?.actualStatus === 'Early Leave') earlyLeaveDays++;
         if (rec?.actualStatus === 'Incomplete') incompleteDays++;
@@ -122,6 +142,9 @@ export class SummaryService {
       year, month, totalWorkingDays, presentDays,
       absentDays, leaveDays, halfDays,
       totalOTHours: parseFloat(totalOTHours.toFixed(2)),
+      grossOTHours: parseFloat(grossOTHours.toFixed(2)),
+      coveredHoursDeducted: parseFloat(totalCoveredHoursDeduction.toFixed(2)),
+      overtimeCoveredLeaves,
       extraDays,
       attendancePercentage,
       lateDays,
@@ -175,6 +198,114 @@ export class SummaryService {
   async getPerformanceTrend(uid: string, year: number): Promise<MonthlySummary[]> {
     const months = Array.from({ length: 12 }, (_, i) => i + 1);
     return Promise.all(months.map(m => this.getMonthlySummary(uid, year, m)));
+  }
+
+  async getDateRangeSummary(uid: string, startDate: string, endDate: string): Promise<DateRangeSummary> {
+    const workingDays = await this.attendanceService.getWorkingDaysBetween(startDate, endDate);
+    const records = await this.attendanceService.getAttendanceForDateRange(uid, startDate, endDate);
+    const leaves = await this.leaveService.getLeavesForDateRange(uid, startDate, endDate);
+
+    // Calculate total calendar days
+    const startObj = new Date(startDate + 'T00:00:00');
+    const endObj = new Date(endDate + 'T00:00:00');
+    const totalCalendarDays = Math.max(0, Math.round((endObj.getTime() - startObj.getTime()) / (1000 * 3600 * 24)) + 1);
+
+    let grossOTHours = 0;
+    let totalWorkedHours = 0;
+    let totalSundayWorkedDays = 0;
+    let totalSaturdayWorkedDays = 0;
+    let lateDays = 0;
+    let totalLateMinutes = 0;
+    let twentyFourHourShifts = 0;
+    let attendedDays = 0;
+
+    const coveredDays = new Set<string>();
+    records.forEach(r => {
+      grossOTHours += r.otHours ?? 0;
+      totalWorkedHours += r.workedHours ?? 0;
+      if (r.isLate) {
+        lateDays++;
+        totalLateMinutes += r.lateMinutes ?? 0;
+      }
+      if (r.is24HourShift) {
+        twentyFourHourShifts++;
+        if (r.checkInDate && r.checkOutDate && r.checkInDate !== r.checkOutDate) {
+          coveredDays.add(r.checkOutDate);
+        }
+      }
+
+      const recDay = new Date(r.date + 'T00:00:00').getDay();
+      const isAttended = r.status === 'present' || r.status === 'Saturday Covered' || !!r.checkIn;
+
+      if (isAttended) {
+        if (recDay === 0) totalSundayWorkedDays++;
+        if (recDay === 6) totalSaturdayWorkedDays++;
+
+        // Calculate attended days count using full day rule (8-5 weekdays, 8-1 Saturdays, no fractional days)
+        attendedDays += this.attendanceService.getFullDaysEarned(r);
+      }
+    });
+
+    // Leave metrics & covered hour deductions
+    let totalCoveredHoursDeduction = 0;
+    let totalCoveredLeaves = 0;
+    let totalLeaveDays = 0;
+    const leaveBreakdown = {
+      casual: 0,
+      annual: 0,
+      unpaid: 0,
+      halfDays: 0,
+      covered: 0
+    };
+
+    leaves.forEach(l => {
+      const isHalf = l.type !== 'full';
+      const weight = isHalf ? 0.5 : 1.0;
+      totalLeaveDays += weight;
+
+      if (isHalf) leaveBreakdown.halfDays++;
+
+      if (l.isCovered || l.isOvertimeCovered) {
+        totalCoveredLeaves++;
+        leaveBreakdown.covered += weight;
+        const requiredHours = l.type === 'full' ? 9 : 4.5;
+        const covered = l.coveredHours ?? requiredHours;
+        totalCoveredHoursDeduction += covered;
+      }
+
+      const cat = l.leaveCategory || 'unpaid';
+      if (cat === 'casual') leaveBreakdown.casual += weight;
+      else if (cat === 'annual') leaveBreakdown.annual += weight;
+      else leaveBreakdown.unpaid += weight;
+    });
+
+    const netOTHours = Math.max(0, parseFloat((grossOTHours - totalCoveredHoursDeduction).toFixed(2)));
+    const totalWorkingDays = workingDays.length;
+    const attendancePercentage = totalWorkingDays > 0
+      ? parseFloat(((attendedDays / totalWorkingDays) * 100).toFixed(1))
+      : 0;
+
+    return {
+      startDate,
+      endDate,
+      totalCalendarDays,
+      totalWorkingDays,
+      attendedDays: parseFloat(attendedDays.toFixed(1)),
+      attendancePercentage,
+      totalLeaveDays: parseFloat(totalLeaveDays.toFixed(1)),
+      leaveBreakdown,
+      totalSundayWorkedDays,
+      totalSaturdayWorkedDays,
+      totalOTHours: netOTHours,
+      grossOTHours: parseFloat(grossOTHours.toFixed(2)),
+      coveredHoursDeducted: parseFloat(totalCoveredHoursDeduction.toFixed(2)),
+      totalWorkedHours: parseFloat(totalWorkedHours.toFixed(2)),
+      totalCoveredLeaves,
+      lateDays,
+      totalLateMinutes,
+      twentyFourHourShifts,
+      recordsCount: records.length
+    };
   }
 
   exportToCSV(records: AttendanceRecord[], filename: string): void {

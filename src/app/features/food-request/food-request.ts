@@ -1,9 +1,10 @@
-import { Component, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { AuthService } from '../../core/services/auth.service';
+import { UserService } from '../../core/services/user.service';
 
 @Component({
   selector: 'app-food-request',
@@ -15,7 +16,8 @@ import { AuthService } from '../../core/services/auth.service';
 export class FoodRequestComponent implements OnInit, OnDestroy {
   private attendanceSvc = inject(AttendanceService);
   private http = inject(HttpClient);
-  private auth = inject(AuthService);
+  auth = inject(AuthService);
+  private userSvc = inject(UserService);
 
   // Form Fields
   name = '';
@@ -39,11 +41,13 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
     'Pradeep Suranga'
   ];
 
-
   // States
   isLoading = signal(false);
+  isSubscribing = signal(false);
   successMsg = signal('');
   errorMsg = signal('');
+  lastPrefilledUrl = signal('');
+  popupBlocked = signal(false);
   foodRequests = signal<any[]>([]);
   filteredFoodRequests = computed(() => {
     const profile = this.auth.userProfile();
@@ -73,6 +77,22 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
     'Curry- Chicken (Rs. 120)'
   ];
 
+  constructor() {
+    // Reactively watch for profile loading to ensure Name and Division are NEVER empty
+    effect(() => {
+      const user = this.auth.userProfile();
+      if (user) {
+        if (!this.isOrderForFriend && !this.name) {
+          this.name = user.name || '';
+        }
+        if (user.department && this.divisions.includes(user.department)) {
+          this.division = user.department;
+        } else if (user.email && user.email.toLowerCase().includes('innovex')) {
+          this.division = 'Innovex Office';
+        }
+      }
+    });
+  }
 
   ngOnInit() {
     // Prefill name from authenticated user profile if available
@@ -80,6 +100,12 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
     if (user?.name) {
       this.name = user.name;
     }
+    if (user?.department && this.divisions.includes(user.department)) {
+      this.division = user.department;
+    } else if (user?.email && user.email.toLowerCase().includes('innovex')) {
+      this.division = 'Innovex Office';
+    }
+
     this.loadFoodRequests();
 
     // Start Live Clock
@@ -87,6 +113,36 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
     this.clockInterval = setInterval(() => {
       this.updateClock();
     }, 1000);
+  }
+
+  async subscribeToFood() {
+    const user = this.auth.currentUser();
+    if (!user) return;
+    this.isSubscribing.set(true);
+    try {
+      await this.userSvc.setFoodSubscription(user.uid, true);
+      await this.auth.loadUserProfile(user.uid);
+      this.successMsg.set('Successfully subscribed to Food Request Form! You can now place lunch orders.');
+    } catch (e: any) {
+      this.errorMsg.set('Failed to subscribe: ' + e.message);
+    } finally {
+      this.isSubscribing.set(false);
+    }
+  }
+
+  async unsubscribeFromFood() {
+    const user = this.auth.currentUser();
+    if (!user) return;
+    this.isSubscribing.set(true);
+    try {
+      await this.userSvc.setFoodSubscription(user.uid, false);
+      await this.auth.loadUserProfile(user.uid);
+      this.successMsg.set('Unsubscribed from Food Request Form.');
+    } catch (e: any) {
+      this.errorMsg.set('Failed to unsubscribe: ' + e.message);
+    } finally {
+      this.isSubscribing.set(false);
+    }
   }
 
   ngOnDestroy() {
@@ -252,12 +308,24 @@ export class FoodRequestComponent implements OnInit, OnDestroy {
     try {
       const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdoPrpw7Ybg5jujOEtAqcTCyTU2z7VRBdxeWoi6BTwLbnm7dg/viewform';
       const prefilledUrl = `${baseUrl}?entry.1711473520=${encodeURIComponent(payload.name)}&entry.1809901273=${encodeURIComponent(payload.division)}&entry.1524728558=${encodeURIComponent(payload.lunchCategory)}`;
+      this.lastPrefilledUrl.set(prefilledUrl);
       
       console.log('Opening pre-filled Google Form in a new tab:', prefilledUrl);
-      window.open(prefilledUrl, '_blank');
+      const formWin = window.open(prefilledUrl, '_blank');
+      if (!formWin || formWin.closed || typeof formWin.closed === 'undefined') {
+        this.popupBlocked.set(true);
+      } else {
+        this.popupBlocked.set(false);
+      }
     } catch (e: any) {
       console.error('Failed to open pre-filled Google Form:', e);
+      this.popupBlocked.set(true);
     }
+  }
 
+  openPrefilledForm() {
+    if (this.lastPrefilledUrl()) {
+      window.open(this.lastPrefilledUrl(), '_blank');
+    }
   }
 }

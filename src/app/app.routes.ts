@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, adminGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard, adminGuard, foodSubscribedGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -49,7 +49,8 @@ export const routes: Routes = [
       },
       {
         path: 'food-request',
-        loadComponent: () => import('./features/food-request/food-request').then(m => m.FoodRequestComponent)
+        loadComponent: () => import('./features/food-request/food-request').then(m => m.FoodRequestComponent),
+        canActivate: [foodSubscribedGuard]
       },
       {
         path: 'profile',

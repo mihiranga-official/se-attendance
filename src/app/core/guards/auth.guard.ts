@@ -49,3 +49,21 @@ export const guestGuard: CanActivateFn = () => {
     })
   );
 };
+
+export const foodSubscribedGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  return toObservable(auth.isLoading).pipe(
+    filter(loading => !loading),
+    take(1),
+    map(() => {
+      const profile = auth.userProfile();
+      if (profile?.isFoodSubscribed) {
+        return true;
+      }
+      router.navigate(['/dashboard']);
+      return false;
+    })
+  );
+};

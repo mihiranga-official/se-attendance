@@ -28,4 +28,8 @@ export class UserService {
   async createUserProfile(profile: UserProfile): Promise<void> {
     await set(ref(database, `users/${profile.uid}`), profile);
   }
+
+  async setFoodSubscription(uid: string, subscribed: boolean): Promise<void> {
+    await update(ref(database, `users/${uid}`), { isFoodSubscribed: subscribed });
+  }
 }

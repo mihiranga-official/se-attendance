@@ -17,6 +17,11 @@ export interface BonusProgress {
   daysUntilHalfBonus: number;
   daysUntilFullBonus: number;
   currentBonus: 'none' | 'half' | 'full';
+  currentMonthWorkingDays?: number;
+  currentMonthHolidays?: number;
+  monthName?: string;
+  monthlyFullTarget?: number;
+  monthlyHalfTarget?: number;
 }
 
 @Component({

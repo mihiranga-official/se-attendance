@@ -18,6 +18,7 @@ interface CalendarDay {
   isCurrentMonth: boolean;
   dayOfWeek: number;
   record?: AttendanceRecord;
+  overnightEndRecord?: AttendanceRecord;
   leave?: LeaveRecord;
   isContinuation?: boolean;
   isStart?: boolean;
@@ -52,6 +53,19 @@ export class AttendanceComponent implements OnInit {
   records = signal<AttendanceRecord[]>([]);
   leaves = signal<LeaveRecord[]>([]);
 
+  // Monthly Working Days & Metrics
+  totalWorkingDays = signal(0);
+  monthlyAttendedDays = signal(0);
+  monthlyOTHours = signal(0);
+  monthlyLeaveDays = signal(0);
+  monthlySundaysCount = signal(0);
+  monthlyHolidaysCount = signal(0);
+  monthlyAttendanceRate = computed(() => {
+    const total = this.totalWorkingDays();
+    if (total === 0) return 0;
+    return parseFloat(((this.monthlyAttendedDays() / total) * 100).toFixed(1));
+  });
+
   editCheckIn = '';
   editCheckInDate = '';
   editCheckOut = '';
@@ -85,13 +99,49 @@ export class AttendanceComponent implements OnInit {
     const uid = this.auth.currentUser()?.uid;
     if (!uid) return;
     await this.holidaySvc.ensureLoaded();
-    const [recs, leaves, users, specialEventsSnap, personalEventsSnap] = await Promise.all([
+    const [workingDays, recs, leaves, users, specialEventsSnap, personalEventsSnap] = await Promise.all([
+      this.attendanceSvc.getWorkingDaysInMonth(this.currentYear(), this.currentMonth()),
       this.attendanceSvc.getAttendanceForMonth(uid, this.currentYear(), this.currentMonth()),
       this.leaveSvc.getLeavesForMonth(uid, this.currentYear(), this.currentMonth()),
       this.userSvc.getAllUsers(),
       get(ref(database, 'specialEvents')),
       get(ref(database, `users/${uid}/personalEvents`))
     ]);
+
+    this.totalWorkingDays.set(workingDays.length);
+
+    // Calculate calendar counts: Sundays and Public Holidays in the month
+    const daysInMonth = new Date(this.currentYear(), this.currentMonth(), 0).getDate();
+    let sundays = 0;
+    let holidays = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${this.currentYear()}-${String(this.currentMonth()).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayOfWeek = new Date(dateStr + 'T00:00:00').getDay();
+      if (dayOfWeek === 0) {
+        sundays++;
+      } else if (this.holidaySvc.isHoliday(dateStr)) {
+        holidays++;
+      }
+    }
+    this.monthlySundaysCount.set(sundays);
+    this.monthlyHolidaysCount.set(holidays);
+
+    // Calculate attended days and OT for this month
+    let attended = 0;
+    let totalOt = 0;
+    recs.forEach(r => {
+      totalOt += r.otHours ?? 0;
+      attended += this.attendanceSvc.getFullDaysEarned(r);
+    });
+
+    let totalLeave = 0;
+    leaves.forEach(l => {
+      totalLeave += l.type === 'full' ? 1.0 : 0.5;
+    });
+
+    this.monthlyAttendedDays.set(attended);
+    this.monthlyOTHours.set(parseFloat(totalOt.toFixed(1)));
+    this.monthlyLeaveDays.set(parseFloat(totalLeave.toFixed(1)));
 
     const specialEvents = specialEventsSnap.exists()
       ? Object.values(specialEventsSnap.val()).filter((e: any) => e.target === 'all' || e.targetUid === uid)
@@ -195,6 +245,7 @@ export class AttendanceComponent implements OnInit {
         day: d, isToday: false, isCurrentMonth: false,
         dayOfWeek: dayOfWeekVal,
         record: getEffectiveRecord(dateStr, dayOfWeekVal),
+        overnightEndRecord: endMap.get(dateStr),
         isStart: startMap.has(dateStr),
         isEnd: endMap.has(dateStr),
         isContinuation: spanMap.has(dateStr),
@@ -217,6 +268,7 @@ export class AttendanceComponent implements OnInit {
         isCurrentMonth: true,
         dayOfWeek: dayOfWeekVal,
         record: getEffectiveRecord(dateStr, dayOfWeekVal),
+        overnightEndRecord: endMap.get(dateStr),
         isStart: startMap.has(dateStr),
         isEnd: endMap.has(dateStr),
         isContinuation: spanMap.has(dateStr),
@@ -242,6 +294,7 @@ export class AttendanceComponent implements OnInit {
         day: d, isToday: false, isCurrentMonth: false,
         dayOfWeek: dayOfWeekVal,
         record: getEffectiveRecord(dateStr, dayOfWeekVal),
+        overnightEndRecord: endMap.get(dateStr),
         isStart: startMap.has(dateStr),
         isEnd: endMap.has(dateStr),
         isContinuation: spanMap.has(dateStr),

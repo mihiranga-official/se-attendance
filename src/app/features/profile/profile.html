@@ -44,6 +44,24 @@
             <span class="detail-label">Joined Date</span>
             <span class="detail-value">{{ createdAt() ? (createdAt() | date:'mediumDate') : '—' }}</span>
           </div>
+          <div class="detail-item" style="border-top: 1px solid var(--border); padding-top: 0.75rem; margin-top: 0.5rem; flex-direction: column; align-items: flex-start; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+              <span class="detail-label" style="font-weight: 600;">🍽️ Daily Food Request</span>
+              <span class="user-role-badge" [style.background]="auth.userProfile()?.isFoodSubscribed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.08)'" [style.color]="auth.userProfile()?.isFoodSubscribed ? '#34d399' : 'var(--text-secondary)'">
+                {{ auth.userProfile()?.isFoodSubscribed ? 'Subscribed' : 'Not Subscribed' }}
+              </span>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">
+              Enable to receive daily canteen reminders and unlock the lunch request form.
+            </p>
+            <button class="btn-primary" (click)="toggleFoodSubscription()" [disabled]="isUpdatingFood()" style="font-size: 0.75rem; padding: 5px 12px; border-radius: 6px; width: 100%; justify-content: center; margin: 0; display: inline-flex; align-items: center; gap: 6px;" [style.background]="auth.userProfile()?.isFoodSubscribed ? 'rgba(239, 68, 68, 0.2)' : 'var(--primary)'" [style.color]="auth.userProfile()?.isFoodSubscribed ? '#f87171' : '#fff'" [style.border]="auth.userProfile()?.isFoodSubscribed ? '1px solid rgba(239, 68, 68, 0.3)' : 'none'">
+              @if (isUpdatingFood()) {
+                <span class="spinner" style="width: 14px; height: 14px;"></span>
+              } @else {
+                <span>{{ auth.userProfile()?.isFoodSubscribed ? 'Unsubscribe from Food Portal' : 'Subscribe to Food Request Form' }}</span>
+              }
+            </button>
+          </div>
         </div>
       </div>
     </div>

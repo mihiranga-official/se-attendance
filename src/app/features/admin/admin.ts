@@ -13,13 +13,15 @@ import { HolidayService } from '../../core/services/holiday.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CustomDialogService } from '../../core/services/custom-dialog.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { UserProfile, AttendanceRecord, LeaveRecord } from '../../core/models/user.model';
+import { UserProfile, AttendanceRecord, LeaveRecord, LeaveBalances } from '../../core/models/user.model';
 import { BonusProgress } from '../../shared/components/bonus-card/bonus-card';
+import { AnnualTargetCardComponent } from '../../shared/components/annual-target-card/annual-target-card';
+import { DateRangeSummaryComponent } from '../../shared/components/date-range-summary/date-range-summary';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AnnualTargetCardComponent, DateRangeSummaryComponent],
   templateUrl: './admin.html',
   styleUrl: './admin.scss'
 })
@@ -51,13 +53,24 @@ export class AdminComponent implements OnInit, OnDestroy {
   isSavingEvent = signal(false);
   eventSaveMsg = signal('');
 
-  activeTab: 'users' | 'attendance' | 'leaves' | 'notifications' | 'bonus' | 'holidays' | 'events' = 'users';
+  activeTab: 'users' | 'attendance' | 'leaves' | 'notifications' | 'bonus' | 'holidays' | 'events' | 'analytics' = 'users';
+  selectedAnalyticsUser = signal<string>('');
   showPermissionHelp = signal(false);
   users = signal<UserProfile[]>([]);
   allLeaves = signal<{ uid: string; leaves: LeaveRecord[]; userName: string }[]>([]);
   allAttendance = signal<{ uid: string; records: AttendanceRecord[]; userName: string }[]>([]);
   bonusSummary = signal<{ uid: string; userName: string; progress: BonusProgress }[]>([]);
   notifications = signal<any[]>([]);
+
+  openUserAnalytics(uid: string): void {
+    this.selectedAnalyticsUser.set(uid);
+    this.activeTab = 'analytics';
+  }
+
+  getSelectedUserName(): string {
+    const target = this.users().find(u => u.uid === this.selectedAnalyticsUser());
+    return target ? target.name : 'All Employees';
+  }
 
   isLoading = signal(false);
 
@@ -86,6 +99,27 @@ export class AdminComponent implements OnInit, OnDestroy {
   showUserImportModal = signal(false);
   isImportingUsers = signal(false);
   userImportLog = signal<string[]>([]);
+
+  // Leave Quota Management states (Requirement 8)
+  showQuotaModal = signal(false);
+  isSavingQuota = signal(false);
+  quotaEditUid = signal('');
+  quotaEditName = signal('');
+  quotaCasual: number = 7;
+  quotaAnnual: number = 14;
+
+  // Leave Record Edit states for Admin
+  showEditLeaveModal = signal(false);
+  isSavingLeaveEdit = signal(false);
+  editingLeaveUid = '';
+  editingLeaveUserName = '';
+  editingLeaveId = '';
+  editingLeaveDate = '';
+  editingLeaveCategory: 'casual' | 'annual' | 'total' | 'other' = 'casual';
+  editingLeaveType: 'full' | 'half-morning' | 'half-afternoon' = 'full';
+  editingLeaveReason = '';
+  editingLeaveIsOvertimeCovered = false;
+  originalLeaveData: LeaveRecord | null = null;
 
   async ngOnInit() {
     await this.loadData();
@@ -199,9 +233,9 @@ export class AdminComponent implements OnInit, OnDestroy {
   private processUsers(users: UserProfile[]) {
     const currentAdminUid = this.auth.currentUser()?.uid;
     
-    // Filter out duplicate admin accounts from the UI view
+    // Filter out duplicate master admin accounts (da@damro.local / admin@damro.local) from the UI view
     const filteredUsers = users.filter(u => {
-      if (u.role === 'admin') {
+      if (u.role === 'admin' && (u.email === 'admin@damro.local' || u.email === 'da@damro.local')) {
         if (currentAdminUid) {
           return u.uid === currentAdminUid;
         }
@@ -244,6 +278,32 @@ export class AdminComponent implements OnInit, OnDestroy {
     for (const uid in attendanceDataRaw) {
       discoveredUids.add(uid);
       const userRecords = attendanceDataRaw[uid] as Record<string, AttendanceRecord>;
+
+      // Auto-remove any stray/test attendance records between 2026-01-01 and 2026-03-31
+      for (const date in userRecords) {
+        if (date >= '2026-01-01' && date <= '2026-03-31') {
+          console.log(`[Auto-Clean] Removing 2026 Jan-Mar attendance record: ${uid} on ${date}`);
+          remove(ref(database, `attendance/${uid}/${date}`)).catch(err => 
+            console.error(`Failed to remove attendance record ${uid}/${date}:`, err)
+          );
+          delete userRecords[date];
+        }
+      }
+
+      // Auto-recalculate 24-hour shift records if their OT hours were calculated using legacy buggy logic
+      for (const date in userRecords) {
+        const rec = userRecords[date];
+        if (rec && rec.is24HourShift && rec.checkInDate && rec.checkOutDate && rec.checkInDate !== rec.checkOutDate) {
+          const oldOt = rec.otHours ?? 0;
+          const oldWorked = rec.workedHours ?? 0;
+          this.attendSvc.calculateHoursAndStatus(rec);
+          if (rec.otHours !== oldOt || rec.workedHours !== oldWorked) {
+            console.log(`Auto-correcting 24h shift for ${uid} on ${rec.date}: OT was ${oldOt}h -> now ${rec.otHours}h, Worked was ${oldWorked}h -> now ${rec.workedHours}h`);
+            set(ref(database, `attendance/${uid}/${rec.date}`), rec);
+          }
+        }
+      }
+
       attendanceData[uid] = Object.values(userRecords).filter(r => r.date.startsWith(prefix));
       
       const user = users.find(u => u.uid === uid);
@@ -538,14 +598,15 @@ export class AdminComponent implements OnInit, OnDestroy {
 
     this.isSavingManual.set(true);
     try {
+      const existingSnap = await get(ref(database, `attendance/${uid}/${date}`));
+      const existing = existingSnap.exists() ? existingSnap.val() : {};
       const record: any = {
+        ...existing,
         date,
         status,
         checkIn: checkIn || undefined,
         checkOut: checkOut || undefined,
-        notes: notes || undefined,
-        workedHours: 0,
-        otHours: 0
+        notes: notes || undefined
       };
 
       await this.attendSvc.saveAttendance(uid, record);
@@ -741,6 +802,166 @@ export class AdminComponent implements OnInit, OnDestroy {
       alert('Event removed successfully.');
     } catch (e: any) {
       alert('Failed to remove event: ' + e.message);
+    }
+  }
+
+  openQuotaModal(user: UserProfile) {
+    this.quotaEditUid.set(user.uid);
+    this.quotaEditName.set(user.name);
+    const balances = user.leaveBalances;
+    this.quotaCasual = balances?.casual?.allocated ?? 7;
+    this.quotaAnnual = balances?.annual?.allocated ?? 14;
+    this.showQuotaModal.set(true);
+  }
+
+  async saveQuota() {
+    const uid = this.quotaEditUid();
+    if (!uid) return;
+    this.isSavingQuota.set(true);
+    try {
+      const user = this.users().find(u => u.uid === uid);
+      const existingBalances = user?.leaveBalances;
+      const newBalances: LeaveBalances = {
+        casual: { allocated: Number(this.quotaCasual), used: existingBalances?.casual?.used ?? 0 },
+        annual: { allocated: Number(this.quotaAnnual), used: existingBalances?.annual?.used ?? 0 }
+      };
+      await this.leaveSvc.updateLeaveBalances(uid, newBalances);
+      this.showQuotaModal.set(false);
+      alert('Leave quota updated successfully for ' + this.quotaEditName());
+      await this.loadData();
+    } catch (e: any) {
+      console.error('saveQuota error:', e);
+      if (e.message?.toLowerCase().includes('permission_denied') || e.message?.toLowerCase().includes('permission denied')) {
+        this.showPermissionHelp.set(true);
+      }
+      alert('Failed to update leave quota: ' + e.message);
+    } finally {
+      this.isSavingQuota.set(false);
+    }
+  }
+
+  async applyDefaultQuotasToAll() {
+    const isConfirmed = await this.dialogSvc.confirm('Initialize Team Quotas', 'Set default leave quotas (7 Casual + 14 Annual = 21 Total Leave Days) for all users who do not have quotas set?');
+    if (!isConfirmed) return;
+    this.isLoading.set(true);
+    let successCount = 0;
+    let failedCount = 0;
+    try {
+      for (const user of this.users()) {
+        if (!user.uid) continue;
+        if (!user.leaveBalances) {
+          try {
+            await this.leaveSvc.updateLeaveBalances(user.uid, {
+              casual: { allocated: 7, used: 0 },
+              annual: { allocated: 14, used: 0 }
+            });
+            successCount++;
+          } catch (itemErr: any) {
+            console.error('Failed to update quota for:', user.name, itemErr);
+            failedCount++;
+          }
+        }
+      }
+      if (failedCount > 0) {
+        this.showPermissionHelp.set(true);
+        alert(`Some quotas were saved (${successCount}), but ${failedCount} updates were blocked by Firebase rules. Please update your Firebase Database Rules.`);
+      } else {
+        alert('Leave quotas initialized for team members.');
+      }
+      await this.loadData();
+    } catch (e: any) {
+      if (e.message?.toLowerCase().includes('permission_denied') || e.message?.toLowerCase().includes('permission denied')) {
+        this.showPermissionHelp.set(true);
+      }
+      alert('Error updating quotas: ' + e.message);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  openEditLeaveModal(uid: string, userName: string, leave: LeaveRecord) {
+    this.editingLeaveUid = uid;
+    this.editingLeaveUserName = userName;
+    this.editingLeaveId = leave.leaveId;
+    this.editingLeaveDate = leave.date;
+    this.editingLeaveCategory = (leave.leaveCategory as any) || 'casual';
+    this.editingLeaveType = leave.type || 'full';
+    this.editingLeaveReason = leave.reason || '';
+    this.editingLeaveIsOvertimeCovered = leave.isOvertimeCovered || leave.isCovered || false;
+    this.originalLeaveData = { ...leave };
+    this.showEditLeaveModal.set(true);
+  }
+
+  async saveLeaveEdit() {
+    const uid = this.editingLeaveUid;
+    const leaveId = this.editingLeaveId;
+    if (!uid || !leaveId || !this.originalLeaveData) return;
+
+    this.isSavingLeaveEdit.set(true);
+    try {
+      const updatedData: Partial<LeaveRecord> = {
+        date: this.editingLeaveDate,
+        type: this.editingLeaveType,
+        leaveCategory: this.editingLeaveCategory,
+        reason: this.editingLeaveReason,
+        isOvertimeCovered: this.editingLeaveIsOvertimeCovered,
+        isCovered: this.editingLeaveIsOvertimeCovered
+      };
+      await this.leaveSvc.updateLeave(uid, leaveId, updatedData, this.originalLeaveData);
+      this.showEditLeaveModal.set(false);
+      alert('Leave updated successfully.');
+      await this.loadData();
+    } catch (e: any) {
+      alert('Failed to update leave: ' + e.message);
+    } finally {
+      this.isSavingLeaveEdit.set(false);
+    }
+  }
+
+  async deleteLeaveAsAdmin(uid: string, leave: LeaveRecord) {
+    const isConfirmed = await this.dialogSvc.confirm(
+      'Delete Leave Request',
+      `Are you sure you want to delete this leave on ${leave.date}? If this leave was deducted from quota, the quota will be automatically refunded.`
+    );
+    if (!isConfirmed) return;
+
+    this.isLoading.set(true);
+    try {
+      await this.leaveSvc.deleteLeave(uid, leave.leaveId);
+      alert('Leave request removed and quota refunded.');
+      await this.loadData();
+    } catch (e: any) {
+      alert('Failed to delete leave: ' + e.message);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  editAttendanceRecord(uid: string, rec: AttendanceRecord) {
+    this.manualData.set({
+      uid: uid,
+      date: rec.date,
+      status: (rec.status === 'Saturday Covered' ? 'present' : rec.status) as any,
+      checkIn: rec.checkIn || '08:00',
+      checkOut: rec.checkOut || '17:00',
+      notes: rec.notes || ''
+    });
+    this.showManualModal.set(true);
+  }
+
+  async deleteAttendanceRecord(uid: string, date: string, userName: string) {
+    const isConfirmed = await this.dialogSvc.confirm(
+      'Delete Attendance Entry',
+      `Are you sure you want to remove attendance for ${userName} on ${date}?`
+    );
+    if (!isConfirmed) return;
+
+    try {
+      await remove(ref(database, `attendance/${uid}/${date}`));
+      alert('Attendance entry deleted.');
+      await this.loadData();
+    } catch (e: any) {
+      alert('Failed to delete attendance: ' + e.message);
     }
   }
 }

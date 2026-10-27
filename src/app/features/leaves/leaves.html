@@ -10,6 +10,51 @@
     </button>
   </div>
 
+  <!-- Leave Balances Banner (Total Leave: 21 Days combined) -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <!-- Hero Combined Total Leave Card -->
+    <div class="stat-card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(59, 130, 246, 0.08)); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: 12px; padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span style="font-size: 0.85rem; color: #818cf8; font-weight: 700;">🌟 Total Leave Quota</span>
+        <span class="badge badge-success" style="font-size: 0.75rem;">21 Days Quota</span>
+      </div>
+      <div style="font-size: 1.6rem; font-weight: 800; color: #34d399;">
+        {{ (((leaveBalances()?.casual?.allocated || 7) + (leaveBalances()?.annual?.allocated || 14)) - ((leaveBalances()?.casual?.used || 0) + (leaveBalances()?.annual?.used || 0))).toFixed(1) }} <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 400;">/ {{ (leaveBalances()?.casual?.allocated || 7) + (leaveBalances()?.annual?.allocated || 14) }} days left</span>
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+        Used: {{ ((leaveBalances()?.casual?.used || 0) + (leaveBalances()?.annual?.used || 0)).toFixed(1) }} days (Casual 7 + Annual 14)
+      </div>
+    </div>
+
+    <!-- Casual Leave Card -->
+    <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">🏖️ Casual Leave</span>
+        <span class="badge badge-info" style="font-size: 0.75rem;">7 Days</span>
+      </div>
+      <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-main);">
+        {{ ((leaveBalances()?.casual?.allocated || 7) - (leaveBalances()?.casual?.used || 0)).toFixed(1) }} <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 400;">/ {{ leaveBalances()?.casual?.allocated || 7 }} days left</span>
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+        Used: {{ (leaveBalances()?.casual?.used || 0).toFixed(1) }} days
+      </div>
+    </div>
+
+    <!-- Annual Leave Card -->
+    <div class="stat-card" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">📅 Annual Leave</span>
+        <span class="badge badge-success" style="font-size: 0.75rem;">14 Days</span>
+      </div>
+      <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-main);">
+        {{ ((leaveBalances()?.annual?.allocated || 14) - (leaveBalances()?.annual?.used || 0)).toFixed(1) }} <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 400;">/ {{ leaveBalances()?.annual?.allocated || 14 }} days left</span>
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+        Used: {{ (leaveBalances()?.annual?.used || 0).toFixed(1) }} days
+      </div>
+    </div>
+  </div>
+
   <div class="section-card">
     <h2 class="section-title">My Leave History</h2>
     
@@ -29,9 +74,10 @@
           <thead>
             <tr>
               <th>Date</th>
-              <th>Type</th>
+              <th>Category</th>
+              <th>Duration</th>
               <th>Reason</th>
-              <th>Covering Date</th>
+              <th>Covering Status</th>
               <th>Applied On</th>
               <th>Status</th>
               <th class="actions-col">Actions</th>
@@ -42,12 +88,28 @@
               <tr>
                 <td class="date-cell">{{ leave.date }}</td>
                 <td>
+                  <span class="badge" 
+                    [class.badge-info]="leave.leaveCategory === 'casual'"
+                    [class.badge-success]="leave.leaveCategory === 'annual' || leave.leaveCategory === 'total'"
+                    [class.badge-secondary]="!leave.leaveCategory || leave.leaveCategory === 'other'">
+                    {{ leave.leaveCategory === 'casual' ? '🏖️ Casual' : leave.leaveCategory === 'annual' ? '📅 Annual' : leave.leaveCategory === 'total' ? '🌟 Standard Leave' : 'Unpaid/Other' }}
+                  </span>
+                </td>
+                <td>
                   <span class="type-label" [class]="leave.type">
                     {{ leave.type === 'full' ? 'Full Day' : leave.type === 'half-morning' ? 'Half Day (M)' : 'Half Day (A)' }}
                   </span>
                 </td>
                 <td class="reason-cell">{{ leave.reason }}</td>
-                <td>{{ leave.isCovered ? leave.coveredByDate : '—' }}</td>
+                <td>
+                  @if (leave.isOvertimeCovered || leave.isCovered) {
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.75rem;">
+                      ⚡ Overtime Covered {{ leave.coveredByDate ? '(' + leave.coveredByDate + ')' : '' }}
+                    </span>
+                  } @else {
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">Deducted from Quota</span>
+                  }
+                </td>
                 <td class="applied-cell">{{ leave.appliedAt | date:'mediumDate' }}</td>
                 <td>
                   <span class="badge badge-success">Recorded</span>
@@ -87,11 +149,21 @@
           </div>
 
           <div class="form-group">
+            <label>Leave Category</label>
+            <select [(ngModel)]="leaveCategory" class="input-field" id="leave-category">
+              <option value="casual">Casual Leave ({{ ((leaveBalances()?.casual?.allocated || 7) - (leaveBalances()?.casual?.used || 0)).toFixed(1) }} / 7 days left)</option>
+              <option value="annual">Annual Leave ({{ ((leaveBalances()?.annual?.allocated || 14) - (leaveBalances()?.annual?.used || 0)).toFixed(1) }} / 14 days left)</option>
+              <option value="total">Standard Leave (Draws from Total 21-Day Quota)</option>
+              <option value="other">Other / Unpaid Leave</option>
+            </select>
+          </div>
+
+          <div class="form-group">
             <label>Leave Type</label>
             <select [(ngModel)]="leaveType" class="input-field" id="leave-type">
-              <option value="full">Full Day</option>
-              <option value="half-morning">Half Day (Morning)</option>
-              <option value="half-afternoon">Half Day (Afternoon)</option>
+              <option value="full">Full Day (1.0 day)</option>
+              <option value="half-morning">Half Day - Morning (0.5 day)</option>
+              <option value="half-afternoon">Half Day - Afternoon (0.5 day)</option>
             </select>
           </div>
 
@@ -100,12 +172,18 @@
             <textarea [(ngModel)]="leaveReason" placeholder="Explain the reason for leave..." class="input-field textarea" id="leave-reason"></textarea>
           </div>
 
-          <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 1.25rem;">
-            <input type="checkbox" [(ngModel)]="isCovered" id="leave-is-covered" style="width: auto;">
-            <label for="leave-is-covered" style="margin-bottom: 0;">Covered on another day</label>
+          <!-- Covering Day / Overtime Checkbox (Requirement 6 & 8) -->
+          <div class="form-group checkbox-group" style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 1.25rem; background: rgba(99, 102, 241, 0.1); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.25);">
+            <input type="checkbox" [(ngModel)]="isOvertimeCovered" (change)="isCovered = isOvertimeCovered" id="leave-is-ot-covered" style="width: auto; margin-top: 3px;">
+            <div>
+              <label for="leave-is-ot-covered" style="margin-bottom: 2px; font-weight: 600; cursor: pointer; color: var(--text-main);">Cover with Overtime / Covering Day</label>
+              <p style="margin: 0; font-size: 0.75rem; color: var(--text-secondary);">
+                ⚡ If covered by Overtime, hours are deducted from your OT balance and your Leave quota is preserved!
+              </p>
+            </div>
           </div>
 
-          @if (isCovered) {
+          @if (isOvertimeCovered || isCovered) {
             <div class="form-group">
               <label>Covering Date</label>
               <input type="date" [(ngModel)]="coveredByDate" class="input-field" id="leave-covering-date">

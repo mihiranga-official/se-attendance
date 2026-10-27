@@ -19,14 +19,17 @@ export class LeavesComponent implements OnInit {
   private dialogSvc = inject(CustomDialogService);
 
   leaves = signal<LeaveRecord[]>([]);
+  leaveBalances = signal<any | null>(null);
   isLoading = signal(false);
   showModal = signal(false);
 
   // Form fields
   leaveDate = '';
   leaveType: 'full' | 'half-morning' | 'half-afternoon' = 'full';
+  leaveCategory: 'casual' | 'annual' | 'total' | 'other' = 'casual';
   leaveReason = '';
   isCovered = false;
+  isOvertimeCovered = false;
   coveredByDate = '';
   isSaving = signal(false);
   errorMsg = signal('');
@@ -40,8 +43,12 @@ export class LeavesComponent implements OnInit {
     if (!uid) return;
     this.isLoading.set(true);
     try {
-      const data = await this.leaveSvc.getLeaves(uid);
+      const [data, balances] = await Promise.all([
+        this.leaveSvc.getLeaves(uid),
+        this.leaveSvc.getLeaveBalances(uid)
+      ]);
       this.leaves.set(data);
+      this.leaveBalances.set(balances);
     } catch (e) {
       console.error(e);
     } finally {
@@ -52,8 +59,10 @@ export class LeavesComponent implements OnInit {
   openModal() {
     this.leaveDate = new Date().toISOString().split('T')[0];
     this.leaveType = 'full';
+    this.leaveCategory = 'casual';
     this.leaveReason = '';
     this.isCovered = false;
+    this.isOvertimeCovered = false;
     this.coveredByDate = '';
     this.errorMsg.set('');
     this.showModal.set(true);
@@ -77,10 +86,12 @@ export class LeavesComponent implements OnInit {
       const leaveData: any = {
         date: this.leaveDate,
         type: this.leaveType,
+        leaveCategory: this.leaveCategory,
         reason: this.leaveReason
       };
-      if (this.isCovered) {
+      if (this.isCovered || this.isOvertimeCovered) {
         leaveData.isCovered = true;
+        leaveData.isOvertimeCovered = true;
         leaveData.coveredByDate = this.coveredByDate || this.leaveDate;
       }
       await this.leaveSvc.applyLeave(uid, leaveData);

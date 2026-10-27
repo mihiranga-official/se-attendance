@@ -1,3 +1,14 @@
+export interface LeaveCategoryBalance {
+  allocated: number;
+  used: number;
+}
+
+export interface LeaveBalances {
+  casual: LeaveCategoryBalance;
+  annual: LeaveCategoryBalance;
+  sick?: LeaveCategoryBalance;
+}
+
 export interface UserProfile {
   uid: string;
   name: string;
@@ -9,6 +20,8 @@ export interface UserProfile {
   createdAt: string;
   dob?: string; // YYYY-MM-DD
   photoUrl?: string;
+  isFoodSubscribed?: boolean;
+  leaveBalances?: LeaveBalances;
 }
 
 export type ShiftType = 'normal' | '24h';
@@ -50,6 +63,7 @@ export interface LeaveRecord {
   date: string;          // YYYY-MM-DD
   endDate?: string;      // for multi-day leaves
   type: 'full' | 'half-morning' | 'half-afternoon';
+  leaveCategory?: 'casual' | 'annual' | 'total' | 'other';
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
   appliedAt: string;
@@ -57,6 +71,7 @@ export interface LeaveRecord {
   isCovered?: boolean;
   coveredByDate?: string;
   coveredHours?: number;
+  isOvertimeCovered?: boolean;
 }
 
 export interface MonthlySummary {
@@ -68,6 +83,9 @@ export interface MonthlySummary {
   leaveDays: number;
   halfDays: number;
   totalOTHours: number;
+  grossOTHours?: number;
+  coveredHoursDeducted?: number;
+  overtimeCoveredLeaves?: number;
   extraDays: number;
   attendancePercentage: number;
   lateDays: number;
@@ -97,4 +115,34 @@ export interface YearlySummary {
   freeMealEligibleDays: number;
   bonusEligibleDays: number;
   bonusLostDays: number;
+}
+
+export interface DateRangeLeaveBreakdown {
+  casual: number;
+  annual: number;
+  unpaid: number;
+  halfDays: number;
+  covered: number;
+}
+
+export interface DateRangeSummary {
+  startDate: string;
+  endDate: string;
+  totalCalendarDays: number;
+  totalWorkingDays: number;
+  attendedDays: number;
+  attendancePercentage: number;
+  totalLeaveDays: number;
+  leaveBreakdown: DateRangeLeaveBreakdown;
+  totalSundayWorkedDays: number;
+  totalSaturdayWorkedDays: number;
+  totalOTHours: number;
+  grossOTHours: number;
+  coveredHoursDeducted: number;
+  totalWorkedHours: number;
+  totalCoveredLeaves: number;
+  lateDays: number;
+  totalLateMinutes: number;
+  twentyFourHourShifts: number;
+  recordsCount: number;
 }

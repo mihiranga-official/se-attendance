@@ -1,0 +1,169 @@
+<div class="annual-target-widget" [class.target-met]="data()?.isTargetMet">
+  <!-- Card Header -->
+  <div class="widget-header">
+    <div class="title-cluster">
+      <div class="target-icon-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+        </svg>
+      </div>
+      <div>
+        <h3 class="widget-title">Annual 240-Day Attendance Target</h3>
+        <span class="cycle-period-label">
+          Fiscal Year: {{ formatDate(data()?.cycleStartDate) }} – {{ formatDate(data()?.cycleEndDate) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Variance Badge -->
+    @if (data()) {
+      <div class="variance-badge" [class.badge-ahead]="data()!.varianceStatus === 'ahead'" [class.badge-behind]="data()!.varianceStatus === 'behind'" [class.badge-ontrack]="data()!.varianceStatus === 'on-schedule'">
+        @if (data()!.isTargetMet) {
+          <span>🎉 Target Achieved</span>
+        } @else if (data()!.varianceStatus === 'ahead') {
+          <span>▲ +{{ data()!.varianceDays }} Days Ahead</span>
+        } @else if (data()!.varianceStatus === 'behind') {
+          <span>▼ {{ data()!.varianceDays }} Days Behind</span>
+        } @else {
+          <span>● On Schedule</span>
+        }
+      </div>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-container">
+      <span class="spinner"></span>
+      <p>Calculating 240-day target & forward completion projection...</p>
+    </div>
+  } @else if (data()) {
+    <!-- Main Progress Indicator -->
+    <div class="progress-section">
+      <div class="progress-info-row">
+        <span class="progress-label">Completion Status</span>
+        <span class="progress-pct-value">{{ data()!.completionPercentage }}%</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" [style.width.%]="data()!.completionPercentage"></div>
+      </div>
+      <div class="progress-sub-text">
+        <span>Logged: <strong>{{ data()!.actualDaysLogged }}</strong> / {{ data()!.targetDays }} Days</span>
+        <span>Needed: <strong>{{ data()!.remainingDaysNeeded }}</strong> Days</span>
+      </div>
+    </div>
+
+    <!-- 4 Metrics Grid -->
+    <div class="target-metrics-grid">
+      <!-- Metric 1: Target Requirement -->
+      <div class="metric-card">
+        <div class="metric-icon metric-purple">🎯</div>
+        <div class="metric-data">
+          <span class="metric-val">{{ data()!.targetDays }} <small>Days</small></span>
+          <span class="metric-lbl">Target Requirement</span>
+        </div>
+      </div>
+
+      <!-- Metric 2: Expected Attendance (Up to current) -->
+      <div class="metric-card">
+        <div class="metric-icon metric-blue">📅</div>
+        <div class="metric-data">
+          <span class="metric-val">{{ data()!.expectedDaysToDate }} <small>Days</small></span>
+          <span class="metric-lbl">Expected Attendance (To Date)</span>
+        </div>
+      </div>
+
+      <!-- Metric 3: Actual Logged Attendance -->
+      <div class="metric-card">
+        <div class="metric-icon metric-green">✅</div>
+        <div class="metric-data">
+          <span class="metric-val">{{ data()!.actualDaysLogged }} <small>Days</small></span>
+          <span class="metric-lbl">Actual Logged Attendance</span>
+        </div>
+      </div>
+
+      <!-- Metric 4: Remaining Days Needed -->
+      <div class="metric-card">
+        <div class="metric-icon metric-amber">⏳</div>
+        <div class="metric-data">
+          <span class="metric-val" [class.zero-remaining]="data()!.remainingDaysNeeded === 0">
+            {{ data()!.remainingDaysNeeded }} <small>Days</small>
+          </span>
+          <span class="metric-lbl">Remaining Days</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero Projected Completion Date Banner -->
+    <div class="projected-date-banner" [class.banner-target-met]="data()!.isTargetMet">
+      <div class="banner-left">
+        <div class="calendar-projection-icon">
+          @if (data()!.isTargetMet) {
+            🏆
+          } @else {
+            🚀
+          }
+        </div>
+        <div class="banner-text">
+          <span class="banner-sub">
+            {{ data()!.isTargetMet ? 'Annual Attendance Requirement' : 'Estimated Completion Date' }}
+          </span>
+          <h2 class="banner-date-highlight">{{ data()!.projectedCompletionDate }}</h2>
+          <p class="banner-note">
+            @if (data()!.isTargetMet) {
+              Congratulations! You have satisfied the full 240 working days attendance target for this annual cycle.
+            } @else {
+              Calculated forward sequentially from tomorrow, excluding Sundays and Sri Lankan Full Moon Poya days.
+            }
+          </p>
+        </div>
+      </div>
+
+      @if (showBreakdown) {
+        <button class="btn-toggle-details" (click)="toggleDetails()" title="Toggle calculation details">
+          <span>{{ isExpanded() ? 'Hide Breakdown' : 'Details' }}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" [class.rotated]="isExpanded()">
+            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+          </svg>
+        </button>
+      }
+    </div>
+
+    <!-- Expandable Calculation Breakdown -->
+    @if (isExpanded()) {
+      <div class="projection-breakdown-panel">
+        <div class="breakdown-title">
+          <span>⚙️ Business Calculation & Exclusion Rules Applied</span>
+        </div>
+        <div class="breakdown-list">
+          <div class="breakdown-item">
+            <span class="dot green-dot"></span>
+            <span class="breakdown-label">Standard Work Schedule:</span>
+            <strong class="breakdown-value">Mon–Fri: 8:00 AM – 5:00 PM (1.0 day) · Sat: 8:00 AM – 1:00 PM (1.0 day)</strong>
+          </div>
+          <div class="breakdown-item">
+            <span class="dot red-dot"></span>
+            <span class="breakdown-label">Sundays Excluded:</span>
+            <strong class="breakdown-value">{{ data()!.sundaysSkippedInProjection }} Sundays skipped in forward scan</strong>
+          </div>
+          <div class="breakdown-item">
+            <span class="dot amber-dot"></span>
+            <span class="breakdown-label">Sri Lanka Full Moon Poya Excluded:</span>
+            <strong class="breakdown-value">{{ data()!.poyaDaysSkippedInProjection }} Poya days skipped in forward scan</strong>
+          </div>
+          <div class="breakdown-item">
+            <span class="dot blue-dot"></span>
+            <span class="breakdown-label">Annual Cycle Start Date:</span>
+            <strong class="breakdown-value">April 1st ({{ formatDate(data()!.cycleStartDate) }}) to Current ({{ formatDate(data()!.asOfDate) }})</strong>
+          </div>
+          <div class="breakdown-item">
+            <span class="dot purple-dot"></span>
+            <span class="breakdown-label">Variance Status:</span>
+            <strong class="breakdown-value">
+              {{ data()!.varianceDays >= 0 ? '+' : '' }}{{ data()!.varianceDays }} working days vs expected attendance to date
+            </strong>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

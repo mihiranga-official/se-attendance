@@ -87,17 +87,24 @@
       </div>
     </div>
 
-    <!-- Monthly Targets Required -->
+    <!-- Monthly Targets Required (Dynamically Calculated) -->
     <div class="monthly-targets-section">
-      <span class="targets-section-title">Monthly Targets Required</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 4px;">
+        <span class="targets-section-title">Monthly Targets Required ({{ data?.monthName || 'Current Month' }})</span>
+        @if (data?.currentMonthWorkingDays !== undefined) {
+          <span style="font-size: 0.75rem; color: var(--text-secondary); background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 10px;">
+            {{ data?.currentMonthWorkingDays }} Working Days ({{ data?.currentMonthHolidays ?? 0 }} Holidays)
+          </span>
+        }
+      </div>
       <div class="targets-grid">
         <div class="target-item status-full">
           <span class="target-label">Full Bonus Target</span>
-          <span class="target-value">20.0 days/month</span>
+          <span class="target-value">{{ data?.monthlyFullTarget ? (data?.monthlyFullTarget + ' days/month') : '20.0 days/month' }}</span>
         </div>
         <div class="target-item status-half">
           <span class="target-label">Half Bonus Target</span>
-          <span class="target-value">16.7 days/month</span>
+          <span class="target-value">{{ data?.monthlyHalfTarget ? (data?.monthlyHalfTarget + ' days/month') : '16.7 days/month' }}</span>
         </div>
       </div>
     </div>

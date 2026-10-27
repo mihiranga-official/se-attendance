@@ -54,6 +54,46 @@
     </div>
   }
 
+  <!-- Popup Blocked / Direct Google Form Link Alert -->
+  @if (lastPrefilledUrl()) {
+    <div class="alert alert-info animate-fade" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #93c5fd; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.25rem;">📋</span>
+        <span>
+          @if (popupBlocked()) {
+            <strong>Browser Popup Blocked:</strong> Your drafted order is ready, but your browser prevented opening the new tab.
+          } @else {
+            <strong>Google Form Ready:</strong> Need to open or re-submit your drafted form in the browser?
+          }
+        </span>
+      </div>
+      <a [href]="lastPrefilledUrl()" target="_blank" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; width: auto; margin: 0;">
+        <span>Open Drafted Google Form ↗</span>
+      </a>
+    </div>
+  }
+
+  <!-- Subscription Gate (Requirement 4) -->
+  @if (!auth.userProfile()?.isFoodSubscribed) {
+    <div class="portal-card" style="text-align: center; padding: 3rem 1.5rem; margin-bottom: 2rem; border-radius: 16px; background: var(--bg-card); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+      <div style="font-size: 3.5rem; margin-bottom: 1rem;">🍽️</div>
+      <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);">Food Request Subscription Required</h2>
+      <p style="color: var(--text-secondary); max-width: 540px; margin: 0 auto 1.5rem auto; line-height: 1.6; font-size: 0.95rem;">
+        You are currently not subscribed to the office canteen food ordering system. To order your daily lunch and view the menu, click the subscribe button below.
+      </p>
+      <button class="btn-primary" (click)="subscribeToFood()" [disabled]="isSubscribing()" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.85rem 2rem; font-size: 1rem; border-radius: 10px; width: auto; margin: 0 auto; cursor: pointer;">
+        @if (isSubscribing()) {
+          <span class="spinner"></span>
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+          </svg>
+        }
+        <span>Subscribe to Food Request Form</span>
+      </button>
+    </div>
+  } @else {
+
   <div class="portal-grid stacked-layout">
     <!-- Form Card -->
     <div class="portal-card form-section" [class.form-disabled]="isCutoffPassed()">
@@ -171,14 +211,13 @@
           <label class="form-label">Division</label>
           <div class="radio-list">
             @for (div of divisions; track div) {
-              <label class="radio-card" [class.selected]="division === div" [class.disabled]="div !== 'Transport Office'">
+              <label class="radio-card" [class.selected]="division === div">
                 <input 
                   type="radio" 
                   name="division" 
                   [value]="div" 
                   [(ngModel)]="division" 
                   class="radio-input"
-                  [disabled]="div !== 'Transport Office'"
                   required
                 >
                 <div class="radio-indicator">
@@ -298,5 +337,21 @@
         </table>
       </div>
     </div>
+
+    <!-- Explanation Box (Requirement 9) -->
+    <div class="portal-card" style="padding: 1.5rem; border-radius: 12px; background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border);">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.75rem;">
+        <span style="font-size: 1.25rem;">💡</span>
+        <h3 style="font-size: 1rem; font-weight: 700; margin: 0; color: var(--text-main);">How the Pre-Filled Google Form Works</h3>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0 0 0.5rem 0;">
+        When you submit an order here, two things happen automatically:
+      </p>
+      <ol style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0; padding-left: 1.25rem;">
+        <li><strong>Local Record:</strong> Your order is recorded instantly in the SE Attendance database for tracking and analytics.</li>
+        <li><strong>Drafted Google Form:</strong> The system encodes your <em>Name</em> (<code>entry.1711473520</code>), <em>Division</em> (<code>entry.1809901273</code>), and <em>Lunch Category</em> (<code>entry.1524728558</code>) directly into the Google Form URL. When opened, Google Forms automatically selects your options so you only have to review and hit submit under your company Google Workspace account!</li>
+      </ol>
+    </div>
   </div>
+  }
 </div>

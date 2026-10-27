@@ -13,11 +13,13 @@ import { AttendanceStatusCardComponent } from '../../shared/components/attendanc
 import { UserService } from '../../core/services/user.service';
 import { database } from '../../core/firebase.config';
 import { ref, onValue, off } from 'firebase/database';
+import { AnnualTargetCardComponent } from '../../shared/components/annual-target-card/annual-target-card';
+import { DateRangeSummaryComponent } from '../../shared/components/date-range-summary/date-range-summary';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, BonusCardComponent, AttendanceStatusCardComponent],
+  imports: [CommonModule, FormsModule, BonusCardComponent, AttendanceStatusCardComponent, AnnualTargetCardComponent, DateRangeSummaryComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
@@ -38,6 +40,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   monthlySummary = signal<MonthlySummary | null>(null);
   bonusProgress = signal<BonusProgress | null>(null);
   recentRecords = signal<AttendanceRecord[]>([]);
+  leaveBalances = signal<any | null>(null);
+  isSubscribingFood = signal(false);
   
   todayBirthdays = signal<any[]>([]);
   tomorrowBirthdays = signal<any[]>([]);
@@ -155,18 +159,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
     setInterval(() => this.currentTime.set(this.attendanceSvc.getCurrentTimeStr()), 60000);
 
     this.isLoadingBonus.set(true);
-    const [rec, summary, recent, bonus, leaves, allUsers] = await Promise.all([
+    const [rec, summary, recent, bonus, leaves, allUsers, balances] = await Promise.all([
       this.attendanceSvc.getAttendanceForDate(uid, this.todayStr),
       this.summarySvc.getMonthlySummary(uid, this.today.getFullYear(), this.today.getMonth() + 1),
       this.attendanceSvc.getAttendanceForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1),
       this.bonusSvc.getBonusProgress(uid),
       this.leaveSvc.getLeavesForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1),
-      this.userSvc.getAllUsers()
+      this.userSvc.getAllUsers(),
+      this.leaveSvc.getLeaveBalances(uid)
     ]);
 
     this.todayRecord.set(rec);
     this.monthlySummary.set(summary);
     this.bonusProgress.set(bonus);
+    this.leaveBalances.set(balances);
     this.recentRecords.set(recent.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7));
     this.calculateLists(recent, leaves);
     this.isLoadingBonus.set(false);
@@ -337,13 +343,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
   async refreshSummary() {
     const uid = this.auth.currentUser()?.uid;
     if (!uid) return;
-    const [summary, recent, leaves] = await Promise.all([
+    const [summary, recent, leaves, balances] = await Promise.all([
       this.summarySvc.getMonthlySummary(uid, this.today.getFullYear(), this.today.getMonth() + 1),
       this.attendanceSvc.getAttendanceForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1),
-      this.leaveSvc.getLeavesForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1)
+      this.leaveSvc.getLeavesForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1),
+      this.leaveSvc.getLeaveBalances(uid)
     ]);
     this.monthlySummary.set(summary);
+    this.leaveBalances.set(balances);
     this.calculateLists(recent, leaves);
+  }
+
+  async toggleFoodSubscription() {
+    const uid = this.auth.currentUser()?.uid;
+    if (!uid) return;
+    const current = this.auth.userProfile()?.isFoodSubscribed ?? false;
+    this.isSubscribingFood.set(true);
+    this.actionError.set('');
+    this.actionMsg.set('');
+    try {
+      await this.userSvc.setFoodSubscription(uid, !current);
+      await this.auth.loadUserProfile(uid);
+      this.actionMsg.set(!current ? '✓ Subscribed to Food Request Form! You can now place lunch orders.' : '✓ Unsubscribed from Food Request Form.');
+    } catch (e: any) {
+      this.actionError.set(e.message);
+    } finally {
+      this.isSubscribingFood.set(false);
+    }
   }
 
   getStatusClass(status: string): string {
