@@ -1,6 +1,7 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, inject, signal, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AnnualProjectionService, AnnualProjectionResult } from '../../../core/services/annual-projection.service';
+import { HolidayService } from '../../../core/services/holiday.service';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -12,6 +13,7 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class AnnualTargetCardComponent implements OnInit, OnChanges {
   private projectionSvc = inject(AnnualProjectionService);
+  private holidaySvc = inject(HolidayService);
   private auth = inject(AuthService);
 
   @Input() uid?: string;
@@ -21,6 +23,16 @@ export class AnnualTargetCardComponent implements OnInit, OnChanges {
   data = signal<AnnualProjectionResult | null>(null);
   isLoading = signal(true);
   isExpanded = signal(false);
+
+  constructor() {
+    // Automatically recalculate projection whenever holidays in the system change
+    effect(() => {
+      this.holidaySvc.holidays(); // Register reactive dependency
+      untracked(() => {
+        setTimeout(() => this.loadProjection(), 0);
+      });
+    }, { allowSignalWrites: true });
+  }
 
   ngOnInit(): void {
     this.loadProjection();
@@ -58,7 +70,7 @@ export class AnnualTargetCardComponent implements OnInit, OnChanges {
     if (!isoStr) return '—';
     const parts = isoStr.split('-');
     if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return `${parts[0]}/${parts[1]}/${parts[2]}`;
     }
     return isoStr;
   }

@@ -107,14 +107,14 @@
       <div class="calendar-day" [class]="getDayClass(day)" (click)="selectDay(day)">
         <div class="day-number">{{ day.day }}</div>
 
-        @if (day.record || day.leave || (day.coveringFor && day.coveringFor.length > 0)) {
+        @if (day.record || day.overnightEndRecord || day.leave || (day.coveringFor && day.coveringFor.length > 0)) {
         <div class="day-stats" [class.is-24h]="day.record?.is24HourShift">
+          @if (day.overnightEndRecord) {
+            <div class="overnight-end-pill" style="font-size: 0.68rem; font-weight: 700; color: #f59e0b; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 4px; padding: 2px 4px; margin-bottom: 3px; display: flex; align-items: center; gap: 4px;" [title]="'Overnight shift ended today at ' + day.overnightEndRecord.checkOut">
+              <span>🌙 Out {{ day.overnightEndRecord.checkOut }}</span>
+            </div>
+          }
           @if (day.record?.status === 'present') {
-            @if (day.overnightEndRecord && day.record && day.record.date !== day.overnightEndRecord.date) {
-              <div class="overnight-end-pill" style="font-size: 0.68rem; font-weight: 700; color: #f59e0b; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 4px; padding: 2px 4px; margin-bottom: 3px; display: flex; align-items: center; gap: 4px;" [title]="'Overnight shift ended today at ' + day.overnightEndRecord.checkOut">
-                <span>🌙 Out {{ day.overnightEndRecord.checkOut }}</span>
-              </div>
-            }
             @if (day.record?.is24HourShift) {
               @if (day.isStart) {
                 <div class="status-marker start">
@@ -322,12 +322,18 @@
           </div>
         }
 
-        @if (selectedDay()?.overnightEndRecord && selectedDay()?.record?.date !== selectedDay()?.overnightEndRecord?.date) {
+        @if (selectedDay()?.overnightEndRecord) {
           <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 1.25rem;">🌙</span>
             <div style="font-size: 0.82rem; color: var(--text-main);">
               <strong>Overnight Shift Ended Today:</strong> Started on {{ selectedDay()?.overnightEndRecord?.date }} and checked out at <strong>{{ selectedDay()?.overnightEndRecord?.checkOut }}</strong>.
-              <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px;">The fields below represent this day's separate attendance session.</div>
+              <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px;">
+                @if (selectedDay()?.record && selectedDay()?.record?.date === selectedDay()?.date) {
+                  The fields below represent this day's separate attendance session.
+                } @else {
+                  Add this day's new attendance session below (e.g. In at 09:00 AM, Out at 05:00 PM).
+                }
+              </div>
             </div>
           </div>
         }

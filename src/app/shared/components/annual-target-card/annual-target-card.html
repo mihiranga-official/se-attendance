@@ -112,9 +112,14 @@
             @if (data()!.isTargetMet) {
               Congratulations! You have satisfied the full 240 working days attendance target for this annual cycle.
             } @else {
-              Calculated forward sequentially from tomorrow, excluding Sundays and Sri Lankan Full Moon Poya days.
+              Calculated forward sequentially from tomorrow, excluding Sundays, Sri Lankan Full Moon Poya days, and public/company holidays within this financial year.
             }
           </p>
+          @if (!data()!.isTargetMet && data()!.exceedsFiscalYear) {
+            <span class="fiscal-boundary-warning" style="display: inline-block; margin-top: 6px; font-size: 0.75rem; color: #f59e0b; font-weight: 600;">
+              ⚠️ Estimated date extends past the current financial year end ({{ formatDate(data()!.cycleEndDate) }}).
+            </span>
+          }
         </div>
       </div>
 
@@ -150,10 +155,17 @@
             <span class="breakdown-label">Sri Lanka Full Moon Poya Excluded:</span>
             <strong class="breakdown-value">{{ data()!.poyaDaysSkippedInProjection }} Poya days skipped in forward scan</strong>
           </div>
+          @if (data()!.extraHolidaysSkippedInProjection > 0) {
+            <div class="breakdown-item">
+              <span class="dot purple-dot"></span>
+              <span class="breakdown-label">System / Admin Holidays Excluded:</span>
+              <strong class="breakdown-value">{{ data()!.extraHolidaysSkippedInProjection }} extra holidays skipped in forward scan</strong>
+            </div>
+          }
           <div class="breakdown-item">
             <span class="dot blue-dot"></span>
-            <span class="breakdown-label">Annual Cycle Start Date:</span>
-            <strong class="breakdown-value">April 1st ({{ formatDate(data()!.cycleStartDate) }}) to Current ({{ formatDate(data()!.asOfDate) }})</strong>
+            <span class="breakdown-label">Financial Year Cycle:</span>
+            <strong class="breakdown-value">April 1st ({{ formatDate(data()!.cycleStartDate) }}) to March 31st ({{ formatDate(data()!.cycleEndDate) }})</strong>
           </div>
           <div class="breakdown-item">
             <span class="dot purple-dot"></span>

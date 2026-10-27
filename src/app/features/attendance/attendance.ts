@@ -131,7 +131,7 @@ export class AttendanceComponent implements OnInit {
     let totalOt = 0;
     recs.forEach(r => {
       totalOt += r.otHours ?? 0;
-      attended += this.attendanceSvc.getFullDaysEarned(r);
+      attended += this.attendanceSvc.getAttendedDaysEarned(r);
     });
 
     let totalLeave = 0;
@@ -210,10 +210,16 @@ export class AttendanceComponent implements OnInit {
     };
 
     const getEffectiveRecord = (dateStr: string, dayOfWeekVal: number) => {
-      const existingRecord = recMap.get(dateStr) || spanMap.get(dateStr) || endMap.get(dateStr);
-      if (existingRecord) return existingRecord;
-
-
+      // 1. Primary record for this exact date
+      if (recMap.has(dateStr)) {
+        return recMap.get(dateStr);
+      }
+      // 2. Intermediate span day of multi-day shift
+      if (spanMap.has(dateStr)) {
+        return spanMap.get(dateStr);
+      }
+      // Note: If yesterday's overnight shift ended on dateStr, it is tracked in `overnightEndRecord`
+      // so that dateStr is not locked out from logging its own attendance session.
 
       const isPublicHoliday = this.holidaySvc.isHoliday(dateStr);
       if (isPublicHoliday) {
@@ -332,18 +338,21 @@ export class AttendanceComponent implements OnInit {
     if (!day.isCurrentMonth) return;
     this.selectedDay.set(day);
 
+    const hasOwnRecord = !!(day.record && day.record.date === day.date);
+    const isPostOvernight = !!day.overnightEndRecord;
+
     // Set default values
-    this.editCheckIn = day.record?.checkIn ?? '08:00';
-    this.editCheckInDate = day.record?.checkInDate ?? day.date;
-    this.editCheckOut = day.record?.checkOut ?? '17:00';
-    this.editCheckOutDate = day.record?.checkOutDate ?? day.date;
-    this.editShiftType = (day.record?.shiftType as ShiftType) ?? 'normal';
-    this.editNotes = day.record?.notes ?? '';
+    this.editCheckIn = hasOwnRecord ? (day.record?.checkIn ?? '08:00') : (isPostOvernight ? '09:00' : '08:00');
+    this.editCheckInDate = hasOwnRecord ? (day.record?.checkInDate ?? day.date) : day.date;
+    this.editCheckOut = hasOwnRecord ? (day.record?.checkOut ?? '17:00') : '17:00';
+    this.editCheckOutDate = hasOwnRecord ? (day.record?.checkOutDate ?? day.date) : day.date;
+    this.editShiftType = hasOwnRecord ? ((day.record?.shiftType as ShiftType) ?? 'normal') : 'normal';
+    this.editNotes = hasOwnRecord ? (day.record?.notes ?? '') : '';
 
     // Initialize editStatus
     if (day.coveringFor && day.coveringFor.length > 0) {
       this.editStatus = 'covering';
-    } else if (day.record?.status) {
+    } else if (hasOwnRecord && day.record?.status) {
       this.editStatus = day.record.status as any;
     } else if (day.leave) {
       this.editStatus = 'leave';

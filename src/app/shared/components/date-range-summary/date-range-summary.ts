@@ -118,7 +118,7 @@ export class DateRangeSummaryComponent implements OnInit, OnChanges {
     if (!isoStr) return '—';
     const parts = isoStr.split('-');
     if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return `${parts[0]}/${parts[1]}/${parts[2]}`;
     }
     return isoStr;
   }

@@ -59,18 +59,24 @@ export class SummaryService {
     const grossOTHours = totalOTHours;
     totalOTHours = Math.max(0, parseFloat((totalOTHours - totalCoveredHoursDeduction).toFixed(2)));
 
+    const todayStr = this.attendanceService.getTodayStr();
+
     for (const day of workingDays) {
       const rec = recordMap.get(day);
       const leave = leaves.find(l => l.date === day);
 
       if (leave) {
+        const isSaturdayLeave = new Date(day + 'T00:00:00').getDay() === 6;
+        const fullDayHours = isSaturdayLeave ? 5 : 9;
+        const halfDayHours = isSaturdayLeave ? 2.5 : 4.5;
+
         let unpaidHoursForThisLeave = 0;
         if (leave.isCovered || leave.isOvertimeCovered) {
-          const requiredHours = leave.type === 'full' ? 9 : 4.5;
+          const requiredHours = leave.type === 'full' ? fullDayHours : halfDayHours;
           const coveredHours = leave.coveredHours ?? requiredHours;
           unpaidHoursForThisLeave = Math.max(0, requiredHours - coveredHours);
         } else {
-          unpaidHoursForThisLeave = leave.type === 'full' ? 9 : 4.5;
+          unpaidHoursForThisLeave = leave.type === 'full' ? fullDayHours : halfDayHours;
         }
         unpaidLeaveHours += unpaidHoursForThisLeave;
 
@@ -85,14 +91,18 @@ export class SummaryService {
         continue;
       }
 
+      const isFutureDay = day > todayStr;
+      const isToday = day === todayStr;
+
       if (!rec || rec?.status === 'absent') {
-        absentDays++;
-      } else if (rec?.status === 'present' || rec?.status === 'Saturday Covered' || rec?.checkIn) {
-        const fullDays = this.attendanceService.getFullDaysEarned(rec);
-        presentDays += fullDays;
-        if (fullDays === 0) {
-          incompleteDays++;
+        // Only count past days (day < todayStr) as absent!
+        // Future days have not occurred yet, and today is in progress unless explicitly marked absent.
+        if (!isFutureDay && (!isToday || rec?.status === 'absent')) {
+          absentDays++;
         }
+      } else if (rec?.status === 'present' || rec?.status === 'Saturday Covered' || rec?.checkIn) {
+        const attendedDaysEarned = this.attendanceService.getAttendedDaysEarned(rec);
+        presentDays += attendedDaysEarned;
         
         if (rec?.isLate) {
           lateDays++;
@@ -102,9 +112,10 @@ export class SummaryService {
           saturdayViolations++;
         }
         
-        // Bonus calculation
+        // Bonus calculation (strict full-day on-time criteria)
         const is24h = !!(rec?.is24HourShift && rec?.checkInDate && rec?.checkOutDate && rec?.checkInDate !== rec?.checkOutDate);
         const targetDays = is24h ? 2 : 1;
+        const fullDays = this.attendanceService.getFullDaysEarned(rec);
         const bonuses = rec?.bonusDaysEarned ?? fullDays;
         
         bonusEligibleDays += bonuses;
@@ -241,8 +252,8 @@ export class SummaryService {
         if (recDay === 0) totalSundayWorkedDays++;
         if (recDay === 6) totalSaturdayWorkedDays++;
 
-        // Calculate attended days count using full day rule (8-5 weekdays, 8-1 Saturdays, no fractional days)
-        attendedDays += this.attendanceService.getFullDaysEarned(r);
+        // Calculate attended days count using standard attended days rule
+        attendedDays += this.attendanceService.getAttendedDaysEarned(r);
       }
     });
 
@@ -265,10 +276,12 @@ export class SummaryService {
 
       if (isHalf) leaveBreakdown.halfDays++;
 
+      const isSaturday = new Date(l.date + 'T00:00:00').getDay() === 6;
+      const requiredHours = isHalf ? (isSaturday ? 2.5 : 4.5) : (isSaturday ? 5 : 9);
+
       if (l.isCovered || l.isOvertimeCovered) {
         totalCoveredLeaves++;
         leaveBreakdown.covered += weight;
-        const requiredHours = l.type === 'full' ? 9 : 4.5;
         const covered = l.coveredHours ?? requiredHours;
         totalCoveredHoursDeduction += covered;
       }

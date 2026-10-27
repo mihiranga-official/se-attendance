@@ -64,6 +64,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   actionMsg = signal('');
   actionError = signal('');
 
+  // Overnight shift tracking
+  pendingOvernightRecord = signal<AttendanceRecord | null>(null);
+  overnightEndRecord = signal<AttendanceRecord | null>(null);
+  isCheckingOutOvernight = signal(false);
+  showOvernightCheckoutModal = signal(false);
+  customOvernightTime = '02:00';
+
   get greeting(): string {
     const h = this.today.getHours();
     if (h < 12) return 'Good Morning';
@@ -160,8 +167,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     setInterval(() => this.currentTime.set(this.attendanceSvc.getCurrentTimeStr()), 60000);
 
     this.isLoadingBonus.set(true);
-    const [rec, summary, recent, bonus, leaves, allUsers, balances] = await Promise.all([
+    const yesterday = new Date(this.today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+    const [rec, yesterdayRec, summary, recent, bonus, leaves, allUsers, balances] = await Promise.all([
       this.attendanceSvc.getAttendanceForDate(uid, this.todayStr),
+      this.attendanceSvc.getAttendanceForDate(uid, yesterdayStr),
       this.summarySvc.getMonthlySummary(uid, this.today.getFullYear(), this.today.getMonth() + 1),
       this.attendanceSvc.getAttendanceForMonth(uid, this.today.getFullYear(), this.today.getMonth() + 1),
       this.bonusSvc.getBonusProgress(uid),
@@ -171,6 +183,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ]);
 
     this.todayRecord.set(rec);
+    if (yesterdayRec?.checkIn && !yesterdayRec?.checkOut) {
+      this.pendingOvernightRecord.set(yesterdayRec);
+    } else if (yesterdayRec?.checkOutDate === this.todayStr && yesterdayRec?.checkOut) {
+      this.overnightEndRecord.set(yesterdayRec);
+    }
+
     this.monthlySummary.set(summary);
     this.bonusProgress.set(bonus);
     this.leaveBalances.set(balances);
@@ -233,6 +251,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  openOvernightModal() {
+    this.customOvernightTime = '02:00';
+    this.showOvernightCheckoutModal.set(true);
+  }
+
+  async checkOutOvernight(time?: string) {
+    const uid = this.auth.currentUser()?.uid;
+    if (!uid) return;
+    this.isCheckingOutOvernight.set(true);
+    this.actionError.set('');
+    this.actionMsg.set('');
+    try {
+      const outTime = time || this.customOvernightTime || this.attendanceSvc.getCurrentTimeStr();
+      const updated = await this.attendanceSvc.checkOutOvernightShift(uid, outTime);
+      this.pendingOvernightRecord.set(null);
+      this.overnightEndRecord.set(updated);
+      this.showOvernightCheckoutModal.set(false);
+      await this.refreshSummary();
+      this.actionMsg.set(`✓ Overnight shift checked out at ${updated.checkOut} | OT: ${updated.otHours?.toFixed(2)}h. Ready for today's check-in.`);
+    } catch (e: any) {
+      this.actionError.set(e.message);
+    } finally {
+      this.isCheckingOutOvernight.set(false);
+    }
+  }
+
   async checkIn() {
     const uid = this.auth.currentUser()?.uid;
     if (!uid) return;
@@ -240,11 +284,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.actionError.set('');
     this.actionMsg.set('');
     try {
+      // If user had an active overnight shift from yesterday not yet checked out, finalize at 02:00 AM
+      if (this.pendingOvernightRecord()) {
+        const updatedYesterday = await this.attendanceSvc.checkOutOvernightShift(uid, '02:00');
+        this.pendingOvernightRecord.set(null);
+        this.overnightEndRecord.set(updatedYesterday);
+      }
       await this.attendanceSvc.checkIn(uid);
       const rec = await this.attendanceSvc.getAttendanceForDate(uid, this.todayStr);
       this.todayRecord.set(rec);
       await this.refreshSummary();
-      this.actionMsg.set(`✓ Checked in at ${rec?.checkIn}`);
+      this.actionMsg.set(`✓ Checked in at ${rec?.checkIn}${rec?.isPostOvernightShift ? ' (Post-Overnight Shift)' : ''}`);
     } catch (e: any) {
       this.actionError.set(e.message);
     } finally {

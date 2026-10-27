@@ -191,6 +191,7 @@ export class AdminComponent implements OnInit, OnDestroy {
         get(ref(database, 'notifications'))
       ]);
 
+      await this.holidaySvc.ensureLoaded();
       this.processRecords(leavesData, attendanceSnap);
 
       if (notificationsSnap.exists()) {
@@ -279,27 +280,25 @@ export class AdminComponent implements OnInit, OnDestroy {
       discoveredUids.add(uid);
       const userRecords = attendanceDataRaw[uid] as Record<string, AttendanceRecord>;
 
-      // Auto-remove any stray/test attendance records between 2026-01-01 and 2026-03-31
-      for (const date in userRecords) {
-        if (date >= '2026-01-01' && date <= '2026-03-31') {
-          console.log(`[Auto-Clean] Removing 2026 Jan-Mar attendance record: ${uid} on ${date}`);
-          remove(ref(database, `attendance/${uid}/${date}`)).catch(err => 
-            console.error(`Failed to remove attendance record ${uid}/${date}:`, err)
-          );
-          delete userRecords[date];
-        }
-      }
-
-      // Auto-recalculate 24-hour shift records if their OT hours were calculated using legacy buggy logic
+      // Auto-recalculate all attendance records against strict rules (Rules 1-8)
       for (const date in userRecords) {
         const rec = userRecords[date];
-        if (rec && rec.is24HourShift && rec.checkInDate && rec.checkOutDate && rec.checkInDate !== rec.checkOutDate) {
+        if (rec && rec.checkIn) {
           const oldOt = rec.otHours ?? 0;
           const oldWorked = rec.workedHours ?? 0;
+          const oldBonus = rec.bonusDaysEarned ?? 0;
+          const oldStatus = rec.actualStatus;
           this.attendSvc.calculateHoursAndStatus(rec);
-          if (rec.otHours !== oldOt || rec.workedHours !== oldWorked) {
-            console.log(`Auto-correcting 24h shift for ${uid} on ${rec.date}: OT was ${oldOt}h -> now ${rec.otHours}h, Worked was ${oldWorked}h -> now ${rec.workedHours}h`);
-            set(ref(database, `attendance/${uid}/${rec.date}`), rec);
+          if (
+            rec.otHours !== oldOt ||
+            rec.workedHours !== oldWorked ||
+            rec.bonusDaysEarned !== oldBonus ||
+            rec.actualStatus !== oldStatus
+          ) {
+            console.log(`Auto-correcting attendance record for ${uid} on ${rec.date} to match strict rules.`);
+            set(ref(database, `attendance/${uid}/${rec.date}`), rec).catch(err =>
+              console.error(`Failed to update attendance record ${uid}/${date}:`, err)
+            );
           }
         }
       }

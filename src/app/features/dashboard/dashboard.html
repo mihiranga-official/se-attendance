@@ -19,6 +19,33 @@
           }
         </div>
 
+        <!-- Active Overnight Shift Alert (if user worked yesterday overnight and hasn't checked out yet) -->
+        @if (pendingOvernightRecord()) {
+          <div class="overnight-active-alert" style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 12px; padding: 12px 16px; margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.5rem;">🌙</span>
+              <div>
+                <div style="font-weight: 700; color: #f59e0b; font-size: 0.9rem;">Active Overnight Shift from Yesterday</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                  Started on {{ pendingOvernightRecord()?.date }} at {{ pendingOvernightRecord()?.checkIn }}. Record departure to finalize overtime.
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button class="btn-primary" (click)="checkOutOvernight('02:00')" [disabled]="isCheckingOutOvernight()" style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 6px 14px; font-size: 0.82rem; border-radius: 8px; font-weight: 600; color: #fff; border: none; cursor: pointer;">
+                @if (isCheckingOutOvernight()) { <span class="spinner" style="width: 14px; height: 14px;"></span> }
+                @else { <span>Leave at 02:00 AM</span> }
+              </button>
+              <button class="btn-secondary" (click)="checkOutOvernight()" [disabled]="isCheckingOutOvernight()" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); cursor: pointer;">
+                Leave Now ({{ currentTime() }})
+              </button>
+              <button class="btn-secondary" (click)="openOvernightModal()" style="padding: 6px 10px; font-size: 0.82rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); cursor: pointer;" title="Enter custom departure time">
+                Custom Time
+              </button>
+            </div>
+          </div>
+        }
+
         <!-- Punch actions and time chips layout (Left-aligned bottom-left of welcome section) -->
         <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-top: 1.25rem;">
           <div class="check-actions" style="align-items: flex-start; margin-top: 0; gap: 0;">
@@ -57,8 +84,14 @@
             }
           </div>
 
-          @if (todayRecord()) {
-          <div class="today-times" style="margin-top: 0;">
+          @if (todayRecord() || overnightEndRecord()) {
+          <div class="today-times" style="margin-top: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            @if (overnightEndRecord()) {
+              <div class="time-chip" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #f59e0b; cursor: default;" title="Overnight shift ended today at {{ overnightEndRecord()?.checkOut }}">
+                <span class="time-label" style="color: #f59e0b;">🌙 Overnight</span>
+                <span class="time-value" style="color: #f59e0b; font-weight: 700;">Out {{ overnightEndRecord()?.checkOut }}</span>
+              </div>
+            }
             @if (!isEditing()) {
               @if (todayRecord()?.checkIn) {
               <div class="time-chip" (click)="toggleEdit()">
@@ -543,3 +576,32 @@
     </div>
     }
   </div>
+
+  <!-- Overnight Departure Time Modal -->
+  @if (showOvernightCheckoutModal()) {
+    <div class="modal-backdrop" (click)="showOvernightCheckoutModal.set(false)" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+      <div class="modal-card" (click)="$event.stopPropagation()" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; width: 90%; max-width: 400px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Check Out Overnight Shift</h3>
+            <p style="margin: 4px 0 0; font-size: 0.8rem; color: var(--text-secondary);">Shift started on {{ pendingOvernightRecord()?.date }} at {{ pendingOvernightRecord()?.checkIn }}</p>
+          </div>
+          <button (click)="showOvernightCheckoutModal.set(false)" style="background: none; border: none; font-size: 1.25rem; color: var(--text-secondary); cursor: pointer;">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label style="font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; display: block; color: var(--text-main);">Departure Time Today ({{ todayStr }})</label>
+            <input type="time" [(ngModel)]="customOvernightTime" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); font-size: 1rem; box-sizing: border-box;">
+          </div>
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button (click)="showOvernightCheckoutModal.set(false)" style="padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); cursor: pointer;">Cancel</button>
+            <button (click)="checkOutOvernight(customOvernightTime)" [disabled]="isCheckingOutOvernight()" style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 8px 16px; border-radius: 8px; font-weight: 600; color: #fff; border: none; cursor: pointer;">
+              @if (isCheckingOutOvernight()) { <span class="spinner" style="width: 14px; height: 14px;"></span> }
+              @else { <span>Confirm Departure</span> }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -25,7 +25,7 @@ export interface UserProfile {
 }
 
 export type ShiftType = 'normal' | '24h';
-export type ActualStatus = 'Completed' | 'Incomplete' | 'Half Day' | 'Early Leave' | 'Late Arrival' | 'Overnight Shift' | '24 Hour Shift' | 'Bonus Eligible' | 'Bonus Lost' | 'Saturday Covered';
+export type ActualStatus = 'Completed' | 'Incomplete' | 'Half Day' | 'Early Leave' | 'Late Arrival' | 'Overnight Shift' | '24 Hour Shift' | 'Bonus Eligible' | 'Bonus Lost' | 'Saturday Covered' | 'Sunday Work' | 'Holiday Work';
 
 export interface BonusDetail {
   date: string;
@@ -56,6 +56,8 @@ export interface AttendanceRecord {
   checkInDate?: string;  // To handle multi-day start if needed
   bonusDetails?: BonusDetail[];
   bonusDaysEarned?: number;
+  isPostOvernightShift?: boolean;
+  overnightCheckOutTime?: string;
 }
 
 export interface LeaveRecord {

@@ -26,7 +26,9 @@ export interface AnnualProjectionResult {
   isTargetMet: boolean;
   sundaysSkippedInProjection: number;
   poyaDaysSkippedInProjection: number;
+  extraHolidaysSkippedInProjection: number;
   futureWorkingDaysCount: number;
+  exceedsFiscalYear: boolean;
 }
 
 /** Official Sri Lanka Full Moon Poya Days (2024 - 2029) */
@@ -132,6 +134,11 @@ export class AnnualProjectionService {
   private poyaMap = new Map<string, string>(
     SRI_LANKA_POYA_DAYS.map(p => [p.date, p.name])
   );
+
+  /** Check if a date string is in the official built-in Sri Lankan Poya days list */
+  isBuiltInPoya(dateStr: string): boolean {
+    return this.poyaMap.has(dateStr);
+  }
 
   /** Check if a date string (YYYY-MM-DD) is a Sri Lankan Full Moon Poya day */
   isPoyaDay(dateStr: string): boolean {
@@ -269,12 +276,14 @@ export class AnnualProjectionService {
 
     // 5. Projected Completion Date Calculation:
     // "Starting from the next working day, count forward sequentially until the remaining required days are satisfied,
-    // skipping all sundays, Poya days, only."
+    // skipping all sundays, Sri Lankan Full Moon Poya days, and any extra public/company holidays added by admin."
     let projectedCompletionDate = 'Target Achieved!';
     let projectedCompletionIso = '';
     let sundaysSkippedInProjection = 0;
     let poyaDaysSkippedInProjection = 0;
+    let extraHolidaysSkippedInProjection = 0;
     let futureWorkingDaysCount = 0;
+    let exceedsFiscalYear = false;
 
     if (isTargetMet) {
       projectedCompletionDate = 'Target Met (240 Days Completed)';
@@ -282,11 +291,10 @@ export class AnnualProjectionService {
     } else {
       let daysRemaining = remainingDaysNeeded;
       const scanDate = new Date(asOfDate.getTime());
-      // Start from the next day
+      // Start from tomorrow
       scanDate.setDate(scanDate.getDate() + 1);
 
       // Loop forward day by day until remaining days are satisfied
-      // Guard against infinite loop with max 1000 days
       let safetyCounter = 0;
       while (daysRemaining > 0 && safetyCounter < 1200) {
         safetyCounter++;
@@ -296,17 +304,26 @@ export class AnnualProjectionService {
         if (dayOfWeek === 0) {
           // Skip Sundays
           sundaysSkippedInProjection++;
-        } else if (this.isPoyaDay(dateIso)) {
-          // Skip Poya days
+        } else if (this.isBuiltInPoya(dateIso)) {
+          // Skip official Sri Lankan Full Moon Poya days
           poyaDaysSkippedInProjection++;
+        } else if (this.holidaySvc.isHoliday(dateIso)) {
+          // Skip extra holidays or custom Poya days added by admin to the system
+          const hName = this.holidaySvc.getHolidayName(dateIso);
+          if (hName && hName.toLowerCase().includes('poya')) {
+            poyaDaysSkippedInProjection++;
+          } else {
+            extraHolidaysSkippedInProjection++;
+          }
         } else {
-          // Valid working day (Mon-Fri or Saturday)
+          // Valid working day (Mon-Fri: 8am-5pm or Sat: 8am-1pm)
           futureWorkingDaysCount++;
           daysRemaining = Math.max(0, daysRemaining - 1.0);
           
           if (daysRemaining <= 0) {
             projectedCompletionIso = dateIso;
-            projectedCompletionDate = this.formatDateDmy(scanDate);
+            projectedCompletionDate = this.formatDateYmd(scanDate);
+            exceedsFiscalYear = dateIso > cycleEndDate;
             break;
           }
         }
@@ -331,7 +348,9 @@ export class AnnualProjectionService {
       isTargetMet,
       sundaysSkippedInProjection,
       poyaDaysSkippedInProjection,
-      futureWorkingDaysCount
+      extraHolidaysSkippedInProjection,
+      futureWorkingDaysCount,
+      exceedsFiscalYear
     };
   }
 
@@ -342,10 +361,10 @@ export class AnnualProjectionService {
     return `${y}-${m}-${day}`;
   }
 
-  private formatDateDmy(d: Date): string {
+  private formatDateYmd(d: Date): string {
     const day = String(d.getDate()).padStart(2, '0');
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const y = d.getFullYear();
-    return `${day}/${m}/${y}`;
+    return `${y}/${m}/${day}`;
   }
 }
