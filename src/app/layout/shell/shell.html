@@ -55,7 +55,6 @@
           </svg>
           <span>Performance Analytics</span>
         </a>
-        @if (auth.userProfile()?.isFoodSubscribed) {
         <a routerLink="/food-request" routerLinkActive="active" (click)="closeSidebar()" class="nav-item"
           id="nav-food-request">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -64,7 +63,6 @@
           </svg>
           <span>Food Request</span>
         </a>
-        }
         <a routerLink="/profile" routerLinkActive="active" (click)="closeSidebar()" class="nav-item" id="nav-profile">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
             <path

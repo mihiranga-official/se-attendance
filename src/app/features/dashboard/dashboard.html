@@ -102,37 +102,75 @@
       </div>
       <div class="hero-right" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center;">
         <div class="hero-cards-row" style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: flex-end; width: auto; max-width: 100%;">
-          <!-- Food Request Card: Strictly suppressed if not subscribed (Requirement 2) -->
-          @if (auth.userProfile()?.isFoodSubscribed) {
+          <!-- Daily Food Request Card: Displayed for every user so anyone can subscribe/unsubscribe -->
           <div class="analytics-card" style="border-radius: 12px; padding: 1rem; width: 290px; min-width: 280px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid var(--border); background: var(--bg-card); margin: 0;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 1.25rem;">🍽️</span>
                 <h4 class="card-title" style="font-size: 0.95rem; margin: 0; font-weight: 700; color: var(--text-main);">Daily Food Request</h4>
               </div>
-              <span class="badge badge-success" style="font-size: 0.7rem; padding: 2px 8px;">
-                Subscribed
-              </span>
+              @if (auth.userProfile()?.isFoodSubscribed) {
+                <span class="badge badge-success" style="font-size: 0.7rem; padding: 2px 8px;">
+                  Subscribed
+                </span>
+              } @else {
+                <span class="badge badge-secondary" style="font-size: 0.7rem; padding: 2px 8px; background: rgba(255, 255, 255, 0.08); color: var(--text-secondary); border: 1px solid var(--border);">
+                  Not Subscribed
+                </span>
+              }
             </div>
             <div class="card-content" style="font-size: 0.8rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px;">
-              <p style="margin: 0; line-height: 1.4;">
-                You are subscribed to the daily food request system.
-              </p>
-              <button 
-                class="btn-primary" 
-                (click)="toggleFoodSubscription()" 
-                [disabled]="isSubscribingFood()" 
-                style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; width: 100%; justify-content: center; margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);"
-              >
-                @if (isSubscribingFood()) {
-                  <span class="spinner"></span>
-                } @else {
-                  <span>Unsubscribe from Food</span>
-                }
-              </button>
+              @if (auth.userProfile()?.isFoodSubscribed) {
+                <p style="margin: 0; line-height: 1.4;">
+                  You are subscribed to the daily food request system.
+                </p>
+                <div style="display: flex; gap: 6px; margin-top: 4px;">
+                  <a 
+                    routerLink="/food-request" 
+                    class="btn-primary" 
+                    style="flex: 1; padding: 6px 10px; font-size: 0.8rem; border-radius: 8px; justify-content: center; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"
+                  >
+                    <span>Order Lunch</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                      <path fill-rule="evenodd" d="M5.22 14.78a.75.75 0 001.06 0l7.22-7.22v5.69a.75.75 0 001.5 0v-7.5a.75.75 0 00-.75-.75h-7.5a.75.75 0 000 1.5h5.69l-7.22 7.22a.75.75 0 000 1.06z" clip-rule="evenodd"/>
+                    </svg>
+                  </a>
+                  <button 
+                    class="btn-primary" 
+                    (click)="toggleFoodSubscription()" 
+                    [disabled]="isSubscribingFood()" 
+                    title="Unsubscribe from Food" 
+                    style="padding: 6px 10px; font-size: 0.8rem; border-radius: 8px; justify-content: center; display: inline-flex; align-items: center; gap: 4px; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);"
+                  >
+                    @if (isSubscribingFood()) {
+                      <span class="spinner" style="width: 12px; height: 12px;"></span>
+                    } @else {
+                      <span>Unsubscribe</span>
+                    }
+                  </button>
+                </div>
+              } @else {
+                <p style="margin: 0; line-height: 1.4;">
+                  Subscribe to order daily office lunch and receive canteen reminders.
+                </p>
+                <button 
+                  class="btn-primary" 
+                  (click)="toggleFoodSubscription()" 
+                  [disabled]="isSubscribingFood()" 
+                  style="padding: 6px 12px; font-size: 0.82rem; border-radius: 8px; width: 100%; justify-content: center; margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; font-weight: 600; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3); cursor: pointer;"
+                >
+                  @if (isSubscribingFood()) {
+                    <span class="spinner" style="width: 14px; height: 14px;"></span>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                      <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+                    </svg>
+                    <span>Subscribe to Food</span>
+                  }
+                </button>
+              }
             </div>
           </div>
-          }
 
           <!-- Leave Balances & Quota Card (Requirement 8) -->
           <div class="analytics-card" style="border-radius: 12px; padding: 1rem; width: 300px; min-width: 290px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid var(--border); background: var(--bg-card); margin: 0;">

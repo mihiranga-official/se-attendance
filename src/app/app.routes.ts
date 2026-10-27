@@ -49,8 +49,7 @@ export const routes: Routes = [
       },
       {
         path: 'food-request',
-        loadComponent: () => import('./features/food-request/food-request').then(m => m.FoodRequestComponent),
-        canActivate: [foodSubscribedGuard]
+        loadComponent: () => import('./features/food-request/food-request').then(m => m.FoodRequestComponent)
       },
       {
         path: 'profile',

@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { SummaryService } from '../../core/services/summary.service';
@@ -19,7 +20,7 @@ import { DateRangeSummaryComponent } from '../../shared/components/date-range-su
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, BonusCardComponent, AttendanceStatusCardComponent, AnnualTargetCardComponent, DateRangeSummaryComponent],
+  imports: [CommonModule, FormsModule, RouterLink, BonusCardComponent, AttendanceStatusCardComponent, AnnualTargetCardComponent, DateRangeSummaryComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
