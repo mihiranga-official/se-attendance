@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { ref, set, get, update } from 'firebase/database';
 import { database } from '../firebase.config';
 import { LeaveRecord, LeaveBalances } from '../models/user.model';
+import { removeUndefined } from '../utils/firebase.utils';
 
 export const DEFAULT_LEAVE_BALANCES: LeaveBalances = {
   casual: { allocated: 7, used: 0 },
@@ -96,7 +97,7 @@ export class LeaveService {
       await this.updateLeaveBalances(uid, currentBalances);
     }
 
-    await set(ref(database, `leaves/${uid}/${leaveId}`), record);
+    await set(ref(database, `leaves/${uid}/${leaveId}`), removeUndefined(record));
   }
 
   async getLeaves(uid: string): Promise<LeaveRecord[]> {
@@ -161,7 +162,7 @@ export class LeaveService {
     }
 
     // 4. Update the record
-    await update(ref(database, `leaves/${uid}/${leaveId}`), updatedData);
+    await update(ref(database, `leaves/${uid}/${leaveId}`), removeUndefined(updatedData));
   }
 
   async deleteLeave(uid: string, leaveId: string): Promise<void> {

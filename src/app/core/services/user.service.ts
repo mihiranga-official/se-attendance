@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { ref, get, set, update, remove } from 'firebase/database';
 import { database } from '../firebase.config';
 import { UserProfile } from '../models/user.model';
+import { removeUndefined } from '../utils/firebase.utils';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -18,7 +19,7 @@ export class UserService {
   }
 
   async updateUser(uid: string, changes: Partial<UserProfile>): Promise<void> {
-    await update(ref(database, `users/${uid}`), changes);
+    await update(ref(database, `users/${uid}`), removeUndefined(changes));
   }
 
   async deleteUser(uid: string): Promise<void> {
@@ -26,7 +27,7 @@ export class UserService {
   }
 
   async createUserProfile(profile: UserProfile): Promise<void> {
-    await set(ref(database, `users/${profile.uid}`), profile);
+    await set(ref(database, `users/${profile.uid}`), removeUndefined(profile));
   }
 
   async setFoodSubscription(uid: string, subscribed: boolean): Promise<void> {

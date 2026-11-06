@@ -4,6 +4,7 @@ import { database } from '../firebase.config';
 import { AttendanceRecord } from '../models/user.model';
 import { Observable, of, from } from 'rxjs';
 import { HolidayService } from './holiday.service';
+import { removeUndefined } from '../utils/firebase.utils';
 
 
 
@@ -513,7 +514,7 @@ export class AttendanceService {
     }
 
     this.calculateHoursAndStatus(record);
-    await set(ref(database, path), record);
+    await set(ref(database, path), removeUndefined(record));
   }
 
   async updateAttendance(uid: string, date: string, changes: Partial<AttendanceRecord>): Promise<void> {
@@ -524,7 +525,7 @@ export class AttendanceService {
       const existing = snap.val() as AttendanceRecord;
       const merged = { ...existing, ...changes };
       this.calculateHoursAndStatus(merged);
-      await update(ref(database, path), merged);
+      await update(ref(database, path), removeUndefined(merged));
     }
   }
 
@@ -716,9 +717,11 @@ export class AttendanceService {
       date: today,
       checkIn: now,
       status: 'present',
-      isPostOvernightShift: isPostOvernight,
-      overnightCheckOutTime: isPostOvernight ? yExisting?.checkOut : undefined
+      isPostOvernightShift: isPostOvernight
     };
+    if (isPostOvernight && yExisting?.checkOut) {
+      record.overnightCheckOutTime = yExisting.checkOut;
+    }
     await this.saveAttendance(uid, record);
   }
 

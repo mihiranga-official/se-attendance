@@ -17,6 +17,7 @@ import { UserProfile, AttendanceRecord, LeaveRecord, LeaveBalances } from '../..
 import { BonusProgress } from '../../shared/components/bonus-card/bonus-card';
 import { AnnualTargetCardComponent } from '../../shared/components/annual-target-card/annual-target-card';
 import { DateRangeSummaryComponent } from '../../shared/components/date-range-summary/date-range-summary';
+import { removeUndefined } from '../../core/utils/firebase.utils';
 
 @Component({
   selector: 'app-admin',
@@ -296,7 +297,7 @@ export class AdminComponent implements OnInit, OnDestroy {
             rec.actualStatus !== oldStatus
           ) {
             console.log(`Auto-correcting attendance record for ${uid} on ${rec.date} to match strict rules.`);
-            set(ref(database, `attendance/${uid}/${rec.date}`), rec).catch(err =>
+            set(ref(database, `attendance/${uid}/${rec.date}`), removeUndefined(rec)).catch(err =>
               console.error(`Failed to update attendance record ${uid}/${date}:`, err)
             );
           }
@@ -448,13 +449,13 @@ export class AdminComponent implements OnInit, OnDestroy {
 
         const record: AttendanceRecord = {
           date: dateStr,
-          checkIn: inTime || undefined,
-          checkOut: outTime || undefined,
-          notes: remarkVal || undefined,
           status: status,
           workedHours: 0,
           otHours: 0
         };
+        if (inTime) record.checkIn = inTime;
+        if (outTime) record.checkOut = outTime;
+        if (remarkVal) record.notes = remarkVal;
 
         await this.attendSvc.saveAttendance(uid, record);
         successCount++;
@@ -486,9 +487,9 @@ export class AdminComponent implements OnInit, OnDestroy {
         name,
         email,
         role,
-        dob: dob || undefined,
         createdAt: new Date().toISOString()
       };
+      if (dob) profile.dob = dob;
 
       await this.userSvc.createUserProfile(profile);
       alert('User profile created successfully.');
@@ -516,12 +517,13 @@ export class AdminComponent implements OnInit, OnDestroy {
     }
     this.isSavingEdit.set(true);
     try {
-      await this.userSvc.updateUser(editData.uid, {
+      const changes: Partial<UserProfile> = {
         name: editData.name,
         email: editData.email,
-        role: editData.role,
-        dob: editData.dob || undefined
-      });
+        role: editData.role
+      };
+      if (editData.dob) changes.dob = editData.dob;
+      await this.userSvc.updateUser(editData.uid, changes);
       alert('User profile updated successfully.');
       this.showEditUserModal.set(false);
       await this.loadData();
@@ -602,11 +604,11 @@ export class AdminComponent implements OnInit, OnDestroy {
       const record: any = {
         ...existing,
         date,
-        status,
-        checkIn: checkIn || undefined,
-        checkOut: checkOut || undefined,
-        notes: notes || undefined
+        status
       };
+      if (checkIn) record.checkIn = checkIn;
+      if (checkOut) record.checkOut = checkOut;
+      if (notes) record.notes = notes;
 
       await this.attendSvc.saveAttendance(uid, record);
       alert('Manual entry saved successfully.');
